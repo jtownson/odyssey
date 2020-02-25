@@ -13,13 +13,19 @@ import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
 import scala.language.postfixOps
 
-class JsonLdApiSpec extends FlatSpec with Matchers {
+abstract class JsonLdApiSpec extends FunSpec {
 
-  val manifest = Await.result(loadManifest("manifest.jsonld"), 5 minutes)
+  def processor: JsonLdProcessor
 
-  println(manifest)
-  manifest.sequence.foreach { testManifest =>
-    println(testManifest)
+  describe("Json-ld API") {
+    describe("compact algorithm") {
+      withCompactManifest { manifest =>
+        manifest.sequence.foreach { test =>
+          it(s"${test.id}, ${test.name}") {
+          }
+        }
+      }
+    }
   }
 }
 
@@ -27,6 +33,10 @@ object JsonLdApiSpec {
 
   import org.scalatest.Assertions.fail
   import io.circe._, io.circe.parser._
+
+  def withCompactManifest(testCode: TestManifest => Any): Unit = {
+    testCode(Await.result(loadTestManifest("compact-manifest.jsonld"), 5 minutes))
+  }
 
   case class TopLevelManifest(
       name: String,
@@ -54,7 +64,9 @@ object JsonLdApiSpec {
       input: String,
       context: Option[String],
       expect: String
-  ) extends Test
+  ) extends Test {
+
+  }
 
   case class NegativeEvaluationTest(
       id: String,
@@ -140,7 +152,16 @@ object JsonLdApiSpec {
       fail("Unknown test type $tpe")
     }
 
-    test.recover { case t => IgnoredTest(id,tpe, name, purpose, s"Loading failed due to exception $t") }
+    test.recover {
+      case t =>
+        IgnoredTest(
+          id,
+          tpe,
+          name,
+          purpose,
+          s"Loading failed due to exception $t"
+        )
+    }
   }
 
   def loadPositiveEvaluationTest(
@@ -181,7 +202,8 @@ object JsonLdApiSpec {
       tpe: String,
       name: String,
       purpose: Option[String]
-  ): Future[Test] = Future.unit.map(_ => IgnoredTest(id, tpe, name, purpose, "Test ignored"))
+  ): Future[Test] =
+    Future.unit.map(_ => IgnoredTest(id, tpe, name, purpose, "Test ignored"))
 
   def manifestFile(path: String): File = {
     new File(
@@ -190,7 +212,6 @@ object JsonLdApiSpec {
   }
 
   def manifestSource(path: String): Future[String] = Future {
-    println(s"Loading manifest at path '$path'.")
     scala.util
       .Using(Source.fromFile(manifestFile(path), "UTF-8"))(_.mkString)
       .fold[String](
@@ -210,6 +231,11 @@ object JsonLdApiSpec {
   }
 
   def maybeLoadDocAt(key: String, doc: HCursor): Future[Option[String]] = {
-    doc.downField(key).assume[Option[String]].fold(Future(Option.empty[String]))(value => manifestSource(value).map(Option.apply))
+    doc
+      .downField(key)
+      .assume[Option[String]]
+      .fold(Future(Option.empty[String]))(
+        value => manifestSource(value).map(Option.apply)
+      )
   }
 }
