@@ -1,0 +1,3 @@
+[submodule "w3c/json-ld-api"]
+	path = w3c/json-ld-api
+	url = git@github.com:w3c/json-ld-api.git
