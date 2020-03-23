@@ -1,29 +1,25 @@
-package net.jtownson.odyssey
+package net.jtownson.odyssey.ld
 
 import java.io.File
 import java.io.File.separatorChar
 
+import net.jtownson.odyssey.ld.JsonLdApiSpec.withCompactManifest
 import org.scalatest._
 
-import scala.io.Source
-import JsonLdApiSpec._
-
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
+import scala.concurrent.{Await, Future}
+import scala.io.Source
 import scala.language.postfixOps
 
-abstract class JsonLdApiSpec extends FunSpec {
+class JsonLdApiSpec extends FunSpec {
 
-  def processor: JsonLdProcessor
+//  def processor: JsonLdProcessor
 
-  describe("Json-ld API") {
-    describe("compact algorithm") {
-      withCompactManifest { manifest =>
-        manifest.sequence.foreach { test =>
-          it(s"${test.id}, ${test.name}") {
-          }
-        }
+  describe("compact algorithm") {
+    withCompactManifest { manifest =>
+      manifest.sequence.foreach { test =>
+        it(s"${test.id}, ${test.name}") {}
       }
     }
   }
@@ -31,8 +27,9 @@ abstract class JsonLdApiSpec extends FunSpec {
 
 object JsonLdApiSpec {
 
+  import io.circe._
+  import io.circe.parser._
   import org.scalatest.Assertions.fail
-  import io.circe._, io.circe.parser._
 
   def withCompactManifest(testCode: TestManifest => Any): Unit = {
     testCode(Await.result(loadTestManifest("compact-manifest.jsonld"), 5 minutes))
@@ -64,9 +61,7 @@ object JsonLdApiSpec {
       input: String,
       context: Option[String],
       expect: String
-  ) extends Test {
-
-  }
+  ) extends Test {}
 
   case class NegativeEvaluationTest(
       id: String,
@@ -118,7 +113,7 @@ object JsonLdApiSpec {
     }
 
   def loadTestManifest(path: String): Future[TestManifest] =
-    manifestDoc(path).flatMap { doc =>
+    manifestDoc("tests" + separatorChar + path).flatMap { doc =>
       val name = doc.downField("name").assume[String]
       val description = doc.downField("description").assume[String]
       val baseIri = doc.downField("baseIri").assume[String]
@@ -207,7 +202,7 @@ object JsonLdApiSpec {
 
   def manifestFile(path: String): File = {
     new File(
-      "w3c" + separatorChar + "json-ld-api" + separatorChar + "tests" + separatorChar + path
+      "w3c" + separatorChar + "json-ld-api" + separatorChar + path
     )
   }
 

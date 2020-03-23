@@ -26,7 +26,7 @@ lazy val root = (project in file("."))
   .settings(
     name := "odyssey",
     libraryDependencies ++=
-      `circe-core` ++ `circe-parser` ++ scalaTest
+      `circe-core` ++ `circe-parser` ++ `json-ld-java` ++ scalaTest
   )
 
 // See https://www.scala-sbt.org/1.x/docs/Using-Sonatype.html for instructions on how to publish to Sonatype.

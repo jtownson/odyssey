@@ -1,48 +1,49 @@
-package net.jtownson.odyssey
+package net.jtownson.odyssey.ld
+
+import net.jtownson.odyssey.ld.JsonLdProcessor._
 
 import scala.concurrent.Future
-import JsonLdProcessor._
-
-import scala.collection.mutable
 import scala.io.Source
+import scala.util.{Failure, Success}
 
 trait JsonLdProcessor {
 
+  def parse(input: Source): Future[JsonLd]
+
   def compact(
-      input: JsonLdInput,
-      context: Option[JsonLdContext],
+      input: JsonLd,
+      context: Option[JsonLd],
       options: Option[JsonLdOptions]
-  ): Future[JsonLdDictionary]
+  ): Future[JsonLd]
 
   def expand(
-      input: JsonLdInput,
+      input: JsonLd,
       options: Option[JsonLdOptions]
-  ): Future[Seq[JsonLdDictionary]]
+  ): Future[Seq[JsonLd]]
 
   def flatten(
-      input: JsonLdInput,
-      context: Option[JsonLdContext],
+      input: JsonLd,
+      context: Option[JsonLd],
       options: Option[JsonLdOptions]
-  ): Future[JsonLdDictionary]
+  ): Future[JsonLd]
 
   def fromRdf(
       input: RdfDataset,
       options: Option[JsonLdOptions]
-  ): Future[Seq[JsonLdDictionary]]
+  ): Future[Seq[JsonLd]]
 
   def toRdf(
-      input: JsonLdInput,
+      input: JsonLd,
       options: Option[JsonLdOptions]
   ): Future[RdfDataset]
 }
 
 object JsonLdProcessor {
-  type JsonLdDictionary = mutable.LinkedHashMap[String, Any]
-  type RdfDataset = mutable.LinkedHashMap[String, RdfGraph]
-
-  type RdfGraph = mutable.Set[RdfTriple]
+  type RdfDataset = Map[String, RdfGraph]
+  type RdfGraph = Set[RdfTriple]
 
   case class RdfTriple(subj: String, pred: String, obj: RdfObject)
+
   sealed trait RdfObject
   object RdfObject {
     case class ObjectString(value: String) extends RdfObject
@@ -50,19 +51,25 @@ object JsonLdProcessor {
   }
   case class RdfLiteral(value: String, datatype: String, language: Option[String])
 
-  sealed trait JsonLdInput
-  object JsonLdInput {
-    case class LdInputDictionary(value: JsonLdDictionary) extends JsonLdInput
-    case class LdInputSeq(value: Seq[JsonLdDictionary]) extends JsonLdInput
-    case class LdInputString(value: String) extends JsonLdInput
+  sealed trait JsonLd
+  object JsonLd {
+    case class JsonLdObject(value: Map[String, JsonLd]) extends JsonLd
+    case class JsonLdSeq(values: Seq[JsonLd]) extends JsonLd
+    case class JsonLdString(value: String) extends JsonLd
 
-  }
+    object JsonLdObject {
+      def apply(values: (String, JsonLd)*): JsonLdObject =
+        JsonLdObject(Map(values: _*))
 
-  sealed trait JsonLdContext
-  object JsonLdContext {
-    case class LdContextDictionary(value: JsonLdDictionary) extends JsonLdContext
-    case class LdContextSeq(value: Seq[JsonLdDictionary]) extends JsonLdContext
-    case class LdContextString(value: String) extends JsonLdContext
+      def fold[T](fObj: Map[String, JsonLd] => T, fSeq: Seq[JsonLd] => T, fStr: String => T)(jsonLd: JsonLd): T = jsonLd match {
+        case JsonLdObject(value) =>
+          fObj(value)
+        case JsonLdSeq(values) =>
+          fSeq(values)
+        case JsonLdString(value) =>
+          fStr(value)
+      }
+    }
   }
 
   case class JsonLdOptions(
@@ -70,7 +77,7 @@ object JsonLdProcessor {
       compactArrays: Boolean = true,
       compactToRelative: Boolean = true,
       documentLoader: Option[LoadDocumentCallback] = None,
-      expandContext: Option[JsonLdDictionary] = None,
+      expandContext: Option[JsonLd] = None,
       extractAllScripts: Boolean = false,
       frameExpansion: Boolean = false,
       ordered: Boolean = false,
