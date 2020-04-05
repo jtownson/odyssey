@@ -1,44 +1,20 @@
 package net.jtownson
 
 import java.io.{StringReader, StringWriter}
-import java.net.{URI, URL, URLConnection, URLStreamHandler, URLStreamHandlerFactory}
-import java.security.PublicKey
-import java.util
+import java.net._
+import java.security.{PrivateKey, PublicKey}
 
-import net.jtownson.odyssey.RDFNode.{Literal, ResourceNode}
+import net.jtownson.odyssey.LinkedDatasetBuilder.LinkedDatasetField
+import net.jtownson.odyssey.LinkedDatasetBuilder.LinkedDatasetField._
 import net.jtownson.odyssey.RDFNode.ResourceNode.{BNode, URINode}
+import net.jtownson.odyssey.RDFNode.{Literal, ResourceNode}
 import net.jtownson.odyssey.VerificationError.InvalidSignature
-import org.apache.jena.rdf.model
-import org.apache.jena.rdf.model.{Model, ModelFactory, Property, Resource, ResourceFactory, Statement, StmtIterator}
+import org.apache.jena.rdf.model.{Model, ModelFactory, Resource}
 import org.jose4j.jwa.AlgorithmConstraints
 import org.jose4j.jwa.AlgorithmConstraints.ConstraintType
 import org.jose4j.jws.{AlgorithmIdentifiers, JsonWebSignature}
 
-import scala.util.Try
-
-//import com.github.jsonldjava.core.{JsonLdApi, JsonLdOptions, RDFDataset, RDFDatasetUtils}
-//import com.github.jsonldjava.utils.JsonUtils
-import net.jtownson.odyssey.LinkedDatasetBuilder.LinkedDatasetField
-import net.jtownson.odyssey.LinkedDatasetBuilder.LinkedDatasetField.{
-  ClaimsField,
-  ContextField,
-  EmptyField,
-  MandatoryFields,
-  SignatureField,
-  TypeField
-}
-import net.jtownson.odyssey.ld.JsonLdProcessor
-
-import scala.concurrent.Future
-import scala.io.Source
-import scala.util.{Failure, Success, Using}
-
 package object odyssey {
-
-  import io.circe.{Json => CirceJson}
-
-  type Json = CirceJson
-  type PrivateKey = java.security.PrivateKey
 
   object syntax {
     implicit def did2RDFNode(did: DID): RDFNode = {
@@ -159,6 +135,7 @@ package object odyssey {
   }
 
   case class LinkedDatasetBuilder[F <: LinkedDatasetField] private[odyssey] (
+      nsMap: Map[String, String] = Map.empty,
       context: Option[Context] = None,
       tpe: Option[String] = None,
       claims: Seq[(ResourceNode, URI, RDFNode)] = Seq.empty,
@@ -166,8 +143,8 @@ package object odyssey {
       publicKeyRef: Option[URL] = None,
       signatureAlgo: Option[String] = None
   ) {
-    def withContext(context: Context): LinkedDatasetBuilder[F with ContextField] = {
-      copy(context = Some(context))
+    def withNamespaces(nsMappings: (String, String)*): LinkedDatasetBuilder[F with ContextField] = {
+      copy(nsMap = nsMappings.toMap)
     }
 
     def withType(term: String): LinkedDatasetBuilder[F with TypeField] = {
@@ -193,12 +170,14 @@ package object odyssey {
       def createSignature(payload: String): Option[String] = {
         for {
           key <- privateKey
+          kid <- publicKeyRef
           algo <- signatureAlgo
         } yield {
           val jws: JsonWebSignature = new JsonWebSignature()
           jws.setPayload(payload)
           jws.setAlgorithmHeaderValue(algo)
           jws.setKey(key)
+          jws.setHeader("kid", kid.toString)
           jws.getCompactSerialization
         }
       }
@@ -275,17 +254,23 @@ package object odyssey {
   case class LinkedDataset private[odyssey] (rdfModel: Model)
 
   object LinkedDataset {
-    def withContext(context: Context) = LinkedDatasetBuilder().withContext(context)
+    def withNamespaces(nsMappings: (String, String)*) = LinkedDatasetBuilder().withNamespaces(nsMappings: _*)
     def withType(term: String) = LinkedDatasetBuilder().withType(term)
     def withClaims(values: (ResourceNode, URI, RDFNode)*) = LinkedDatasetBuilder().withStatements(values: _*)
 
-    def fromJws(jwsSer: String, publicKey: PublicKey): Either[VerificationError, LinkedDataset] = {
+    def fromJws(jwsSer: String): Either[VerificationError, LinkedDataset] = {
+
+      def resolveVerificationKey(keyIdHeader: String): PublicKey = {
+        KeyFoo.getPublicKeyFromRef(new URL(keyIdHeader))
+      }
+
       val jws = new JsonWebSignature()
       jws.setCompactSerialization(jwsSer)
-      jws.setKey(publicKey)
       jws.setAlgorithmConstraints(
         new AlgorithmConstraints(ConstraintType.WHITELIST, AlgorithmIdentifiers.ECDSA_USING_P256_CURVE_AND_SHA256)
       )
+      jws.setKey(resolveVerificationKey(jws.getHeader("kid")))
+
       if (jws.verifySignature()) {
         val payload = jws.getPayload
 

@@ -3,7 +3,7 @@ package net.jtownson.odyssey
 import java.io.{File, StringReader}
 import java.net.URL
 import java.nio.file.Paths
-import java.security.{KeyPair, PublicKey}
+import java.security.{KeyPair, PrivateKey, PublicKey}
 
 import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter
 import org.bouncycastle.openssl.{PEMKeyPair, PEMParser}
