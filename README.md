@@ -23,7 +23,7 @@ val subject = DID(method = "ata", suffix = "abc123")
 
 val context = Context.fromURL("https://json-ld.org/contexts/person.jsonld")
 
-val claims = LinkedDataset.withContext(context).withType("Person").withClaims(
+val claims = LinkedDataset.withContext(context).withType("Person").withStatements(
   subject -> "email" -> "mailto:john.doe@example.com",
   subject -> "telephone" -> "01101 110123",
   subject -> "address" -> "Buckingham Palace, SW1A 1AA"
@@ -35,11 +35,11 @@ import java.net.URL
 val privateKey: PrivateKey = ???
 val publicKeyRef = new URL("did:ata:dXNHwJ#keys-1")
 
-val verifiableClaims = claims.withEd25519Signature2018(privateKey, publicKeyRef)
+val verifiableClaims = claims.withEcdsaSecp256k1Signature2019(privateKey, publicKeyRef)
 
 // write the claims to a circe JSON object
 import net.jtownson.odyssey.circe._
-val circeJsonLd = verifiableClaims.toJson
+val circeJsonLd = verifiableClaims.toJWS
 
 // write the claims to a String
 val jsonLdString = verifiableClaims.mkString

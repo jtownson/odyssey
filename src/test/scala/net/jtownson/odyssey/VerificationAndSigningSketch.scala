@@ -1,21 +1,12 @@
 package net.jtownson.odyssey
 
-import java.io.{File, FileOutputStream, FileWriter, StringWriter}
 import java.net.URI
-import java.security.spec.X509EncodedKeySpec
-import java.security.{KeyPair, KeyPairGenerator, PublicKey, Security}
-import java.util.Base64
 
 import io.circe.Printer
 import net.jtownson.odyssey.RDFNode.Literal
-import net.jtownson.odyssey.VerificationAndSigningSketch.jsonPrinter
-import org.bouncycastle.jce.provider.BouncyCastleProvider
-import org.bouncycastle.openssl.MiscPEMGenerator
-import org.bouncycastle.util.io.pem.{PemObjectGenerator, PemWriter}
-
-import scala.concurrent.ExecutionContext.Implicits.global
 import org.scalatest.FlatSpec
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.{Failure, Success}
 
 class VerificationAndSigningSketch extends FlatSpec {
@@ -29,48 +20,49 @@ class VerificationAndSigningSketch extends FlatSpec {
 
   // Define those statements...
   val context = Context.withNamespaces("f" -> "http://xmlns.com/foaf/0.1/")
+
   val claims = LinkedDataset
     .withContext(context)
-    .withClaims(
+    .withStatements(
       (subject, "f:name", Literal("Her Majesty The Queen")),
       (subject, "f:jobTitle", Literal("Queen")),
       (subject, "f:address", Literal("Buckingham Palace, SW1A 1AA"))
     )
 
-  println(claims.toJson.printWith(jsonPrinter))
-
   // Define the signature.
-  val keyPair = VerificationAndSigningSketch.generateKeypair
 
-  // Can could use HTTPS as the PKI...
+  // For now we use public keys on disk, so
+  // the PKI is the local computer.
+  val (publicKeyRef, privateKey) = KeyFoo.getKeyPair
+  // Real code could use HTTPS...
   val publicKeyRefHTTPS = "https://example.com/keys/key-1.pem"
-  // Or cardano...
+  // Or Cardano via prism DIDs...
   val publicKeyRefDID = "did:ata:<issuer-suffix>#keys-1"
 
-  // but use file system for now
-  val publicKeyRefFile = VerificationAndSigningSketch.writeKey(keyPair.getPublic).toURI.toURL
-  println(publicKeyRefFile)
-
-  val verifiableClaims = claims.withEd25519Signature2018(keyPair.getPrivate, publicKeyRefFile)
+  val verifiableClaims = claims.withEcdsaSecp256k1Signature2019(publicKeyRef, privateKey)
 
   // To send it somewhere else, we will serialize
   // to json-ld...
-  val json: Json = verifiableClaims.toJson
+  val jws: String = verifiableClaims.toJWS
 
+  println(jws)
   // ...or some binary encoding
-  val proto: Array[Byte] = verifiableClaims.toProto
+//  val proto: Array[Byte] = verifiableClaims.toProto
 
   /// ... somewhere else, another app, another part of the system, we obtain the json/proto...
-  val parseF = LinkedDataset.fromJson(json)
+  val parseE = LinkedDataset.fromJws(jws, KeyFoo.getPublicKeyFromRef(publicKeyRef))
 
-  parseF.onComplete {
-    case Success(linkedDataset) =>
-    // great, we've got our data back
-    case Failure(exception) =>
-    // oh dear, there must have been either:
-    // a (network) problem resolving the verification public key
-    // an invalid JSON object
-    // an invalid signature
+  parseE match {
+    case Right(linkedDataset) =>
+      // great, we have our data back
+      println("got the dataset: ")
+      linkedDataset.rdfModel.write(System.out, "JSON-LD")
+    case Left(error) =>
+      // oh dear, there must have been either:
+      // a (network) problem resolving the verification public key
+      // an invalid JSON object
+      // an invalid signature
+      println(s"Error: $error")
   }
 
   /**
@@ -84,25 +76,4 @@ class VerificationAndSigningSketch extends FlatSpec {
 
 object VerificationAndSigningSketch {
   val jsonPrinter = Printer.spaces2
-
-  def generateKeypair: KeyPair = {
-    Security.addProvider(new BouncyCastleProvider())
-    val generator = KeyPairGenerator.getInstance("Ed25519")
-    generator.generateKeyPair()
-  }
-
-  def writeKey(publicKey: PublicKey): File = {
-    writeFile("id_ed25519.pub", Base64.getEncoder.encode(publicKey.getEncoded))
-  }
-
-  def writeFile(filename: String, arr: Array[Byte]): File = {
-    val file = new File(filename)
-    val bw = new FileOutputStream(file)
-    try {
-      bw.write(arr)
-      file
-    } finally {
-      bw.close()
-    }
-  }
 }

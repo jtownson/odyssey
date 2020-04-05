@@ -30,6 +30,8 @@ lazy val root = (project in file("."))
         `json-ld-java` ++
         `bouncy-castle` ++
         jena ++
+        jose ++
+        cats ++
         scalaTest
   )
 

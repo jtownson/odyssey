@@ -23,4 +23,12 @@ object Dependencies {
   lazy val jena = Seq(
     "org.apache.jena" % "apache-jena-libs" % "3.14.0"
   )
+
+  lazy val jose = Seq(
+    "org.bitbucket.b_c" % "jose4j" % "0.7.0"
+  )
+
+  lazy val cats = Seq(
+    "org.typelevel" %% "cats-core" % "2.0.0"
+  )
 }
