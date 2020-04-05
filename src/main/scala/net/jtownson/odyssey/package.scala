@@ -120,7 +120,7 @@ package object odyssey {
     ) extends RDFNode
 
     object Literal {
-      val stringType = new URI("http://www.w3.org/1999/02/22-rdf-syntax-ns#langString")
+      val stringType = new URI("xsd:string")
     }
 
     def fold[T](fUri: URI => T, fBNode: String => T, fLiteral: (String, URI, Option[String]) => T)(node: RDFNode): T =
