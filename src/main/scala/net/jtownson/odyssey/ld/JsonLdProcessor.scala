@@ -61,14 +61,15 @@ object JsonLdProcessor {
       def apply(values: (String, JsonLd)*): JsonLdObject =
         JsonLdObject(Map(values: _*))
 
-      def fold[T](fObj: Map[String, JsonLd] => T, fSeq: Seq[JsonLd] => T, fStr: String => T)(jsonLd: JsonLd): T = jsonLd match {
-        case JsonLdObject(value) =>
-          fObj(value)
-        case JsonLdSeq(values) =>
-          fSeq(values)
-        case JsonLdString(value) =>
-          fStr(value)
-      }
+      def fold[T](fObj: Map[String, JsonLd] => T, fSeq: Seq[JsonLd] => T, fStr: String => T)(jsonLd: JsonLd): T =
+        jsonLd match {
+          case JsonLdObject(value) =>
+            fObj(value)
+          case JsonLdSeq(values) =>
+            fSeq(values)
+          case JsonLdString(value) =>
+            fStr(value)
+        }
     }
   }
 
