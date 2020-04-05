@@ -24,15 +24,14 @@ class VerificationAndSigningSketch extends FlatSpec {
     )
 
   // Define the signature.
-
-  // For now we use public keys on disk, so
-  // the PKI is the local computer.
+  // For now we use public keys on disk,
+  // so 'resolving' the key is just loading it from the openssl pem file.
   val (publicKeyRef, privateKey) = KeyFoo.getKeyPair
   println(s"The public key reference for verification is $publicKeyRef")
   // Real code could use HTTPS...
-  val publicKeyRefHTTPS = "https://example.com/keys/key-1.pem"
-  // Or Cardano via prism DIDs...
-  val publicKeyRefDID = "did:ata:<issuer-suffix>#keys-1"
+  val publicKeyRefHTTPS = "https://<host>/<path>/<key>"
+  // Or DIDs...
+  val publicKeyRefDID = "did:<method>:<issuer-suffix>#<key>"
 
   val verifiableClaims = claims.withEcdsaSecp256k1Signature2019(publicKeyRef, privateKey)
 
