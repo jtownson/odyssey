@@ -1,6 +1,7 @@
 package net.jtownson.odyssey
 
 import java.net.URI
+import java.time.LocalDate
 
 import net.jtownson.odyssey.RDFNode.Literal
 import org.scalatest.FlatSpec
@@ -16,6 +17,8 @@ class VerificationAndSigningSketch extends FlatSpec {
 
   // Define those statements...
   val claims = LinkedDataset
+    .withIssuanceDate(LocalDate.of(2020, 1, 1))
+    .withExpiryDate(LocalDate.of(2021, 1, 1))
     .withNamespaces("f" -> "http://xmlns.com/foaf/0.1/")
     .withStatements(
       (subject, "f:name", Literal("Her Majesty The Queen")),
@@ -42,7 +45,7 @@ class VerificationAndSigningSketch extends FlatSpec {
   println("Generated JWS for wire transfer: ")
   println(jws)
 
-  /// ... somewhere else, another app, another part of the system, we obtain the json/proto...
+  // ... somewhere else, another app, another part of the system, we obtain the json/proto...
   val parseE = LinkedDataset.fromJws(jws)
 
   parseE match {
