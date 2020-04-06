@@ -3,7 +3,7 @@ package net.jtownson.odyssey
 import java.io.StringWriter
 import java.net.{URI, URL}
 import java.security.PrivateKey
-import java.time.LocalDate
+import java.time.{LocalDate, ZoneOffset}
 import java.time.format.DateTimeFormatter
 
 import net.jtownson.odyssey.LinkedDatasetBuilder.LinkedDatasetField
@@ -16,6 +16,8 @@ case class LinkedDatasetBuilder[F <: LinkedDatasetField] private[odyssey] (
     nsMap: Map[String, String] = Map.empty,
     tpe: Option[String] = None,
     claims: Seq[(ResourceNode, URI, RDFNode)] = Seq.empty,
+    subject: Option[ResourceNode] = None,
+    subjectStatements: Seq[(URI, RDFNode)] = Seq.empty,
     privateKey: Option[PrivateKey] = None,
     publicKeyRef: Option[URL] = None,
     signatureAlgo: Option[String] = None,
@@ -38,6 +40,10 @@ case class LinkedDatasetBuilder[F <: LinkedDatasetField] private[odyssey] (
     copy(claims = values)
   }
 
+  def withCredentialSubject(subject: ResourceNode, statements: (URI, RDFNode)*): LinkedDatasetBuilder[F with ClaimsField] = {
+    copy(subject = Some(subject), subjectStatements = statements)
+  }
+
   def withEcdsaSecp256k1Signature2019(
       publicKeyRef: URL,
       privateKey: PrivateKey
@@ -50,7 +56,8 @@ case class LinkedDatasetBuilder[F <: LinkedDatasetField] private[odyssey] (
   }
 
   def toJWS(implicit ev: F <:< MandatoryFields): String = {
-    val dateFormatter = DateTimeFormatter.ISO_LOCAL_DATE
+//    val dateFormatter = DateTimeFormatter.ISO_LOCAL_DATE
+
     def createSignature(payload: String): Option[String] = {
       for {
         key <- privateKey
@@ -63,8 +70,8 @@ case class LinkedDatasetBuilder[F <: LinkedDatasetField] private[odyssey] (
         jws.setKey(key)
         jws.setHeader("kid", kid.toString)
 
-        issuanceDate.foreach(iss => jws.setHeader("iss", dateFormatter.format(iss)))
-        expiryDate.foreach(exp => jws.setHeader("exp", dateFormatter.format(exp)))
+        issuanceDate.foreach(iss => jws.setHeader("nbf", iss.atStartOfDay().toEpochSecond(ZoneOffset.UTC)))
+        expiryDate.foreach(exp => jws.setHeader("exp", exp.atStartOfDay().toEpochSecond(ZoneOffset.UTC)))
 
         jws.getCompactSerialization
       }
@@ -116,6 +123,7 @@ case class LinkedDatasetBuilder[F <: LinkedDatasetField] private[odyssey] (
       accModel.add(statement)
     }
 
+
     new LinkedDataset(claimModel)
   }
 }
@@ -130,6 +138,7 @@ object LinkedDatasetBuilder {
     sealed trait EmptyField extends LinkedDatasetField
     sealed trait ContextField extends LinkedDatasetField
     sealed trait ClaimsField extends LinkedDatasetField
+    sealed trait SubjectStatementsField extends LinkedDatasetField
     sealed trait SignatureField extends LinkedDatasetField
 
     sealed trait ExpirationDateField extends LinkedDatasetField
