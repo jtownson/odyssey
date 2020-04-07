@@ -7,7 +7,7 @@ import java.time.LocalDate
 import net.jtownson.odyssey.RDFNode.Literal
 import org.scalatest.FlatSpec
 
-class VerificationAndSigningSketch extends FlatSpec {
+class VerificationAndSigningSketch2 extends FlatSpec {
 
   import syntax._
 
@@ -47,7 +47,7 @@ class VerificationAndSigningSketch extends FlatSpec {
   println(jws)
 
   // ... somewhere else, another app, another part of the system, we obtain the json/proto...
-  val parseE: Either[VerificationError, LinkedDataset] = LinkedDataset.fromJws(jws)
+  val parseE = LinkedDataset.fromJws(jws)
 
   parseE match {
     case Right(linkedDataset) =>
@@ -62,4 +62,3 @@ class VerificationAndSigningSketch extends FlatSpec {
       println(s"Error: $error")
   }
 }
-

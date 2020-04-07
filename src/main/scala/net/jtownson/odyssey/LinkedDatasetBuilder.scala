@@ -4,7 +4,6 @@ import java.io.StringWriter
 import java.net.{URI, URL}
 import java.security.PrivateKey
 import java.time.{LocalDate, ZoneOffset}
-import java.time.format.DateTimeFormatter
 
 import net.jtownson.odyssey.LinkedDatasetBuilder.LinkedDatasetField
 import net.jtownson.odyssey.LinkedDatasetBuilder.LinkedDatasetField._
@@ -22,7 +21,8 @@ case class LinkedDatasetBuilder[F <: LinkedDatasetField] private[odyssey] (
     publicKeyRef: Option[URL] = None,
     signatureAlgo: Option[String] = None,
     issuanceDate: Option[LocalDate] = None,
-    expiryDate: Option[LocalDate] = None
+    expiryDate: Option[LocalDate] = None,
+    content: Option[String] = None
 ) {
   def withIssuanceDate(iss: LocalDate): LinkedDatasetBuilder[F with IssuanceDateField] = {
     copy(issuanceDate = Some(iss))
@@ -55,8 +55,11 @@ case class LinkedDatasetBuilder[F <: LinkedDatasetField] private[odyssey] (
     )
   }
 
+  def withContent(content: String): LinkedDatasetBuilder[F with ContentField] = {
+    copy(content = Some(content))
+  }
+
   def toJWS(implicit ev: F <:< MandatoryFields): String = {
-//    val dateFormatter = DateTimeFormatter.ISO_LOCAL_DATE
 
     def createSignature(payload: String): Option[String] = {
       for {
@@ -123,7 +126,6 @@ case class LinkedDatasetBuilder[F <: LinkedDatasetField] private[odyssey] (
       accModel.add(statement)
     }
 
-
     new LinkedDataset(claimModel)
   }
 }
@@ -140,7 +142,7 @@ object LinkedDatasetBuilder {
     sealed trait ClaimsField extends LinkedDatasetField
     sealed trait SubjectStatementsField extends LinkedDatasetField
     sealed trait SignatureField extends LinkedDatasetField
-
+    sealed trait ContentField extends LinkedDatasetField
     sealed trait ExpirationDateField extends LinkedDatasetField
     sealed trait IssuerField extends LinkedDatasetField
     sealed trait IssuanceDateField extends LinkedDatasetField
