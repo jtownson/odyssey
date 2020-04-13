@@ -12,15 +12,20 @@ import org.jose4j.jwa.AlgorithmConstraints
 import org.jose4j.jwa.AlgorithmConstraints.ConstraintType
 import org.jose4j.jws.{AlgorithmIdentifiers, JsonWebSignature}
 
-case class LinkedDataset private[odyssey] (rdfModel: Model)
+case class VC private[odyssey] (rdfModel: Model)
 
-object LinkedDataset {
-  def withIssuanceDate(iss: LocalDate) = LinkedDatasetBuilder().withIssuanceDate(iss)
-  def withExpiryDate(exp: LocalDate) = LinkedDatasetBuilder().withExpiryDate(exp)
-  def withNamespaces(nsMappings: (String, String)*) = LinkedDatasetBuilder().withNamespaces(nsMappings: _*)
-  def withClaims(values: (ResourceNode, URI, RDFNode)*) = LinkedDatasetBuilder().withStatements(values: _*)
+object VC {
+  def withIssuanceDate(iss: LocalDate) = VCBuilder().withIssuanceDate(iss)
+  def withExpiryDate(exp: LocalDate) = VCBuilder().withExpiryDate(exp)
+  def withNamespaces(nsMappings: (String, String)*) = VCBuilder().withNamespaces(nsMappings: _*)
+  def withClaims(values: (ResourceNode, URI, RDFNode)*) = VCBuilder().withStatements(values: _*)
 
-  def fromJws(jwsSer: String): Either[VerificationError, LinkedDataset] = {
+  def fromJsonLd(jsonLd: String): VC = {
+    val rdfModel = ModelFactory.createDefaultModel().read(new StringReader(jsonLd), "", "JSON-LD")
+    VC(rdfModel)
+  }
+
+  def fromJws(jwsSer: String): Either[VerificationError, VC] = {
 
     def resolveVerificationKey(keyIdHeader: String): PublicKey = {
       KeyFoo.getPublicKeyFromRef(new URL(keyIdHeader))
@@ -38,7 +43,7 @@ object LinkedDataset {
 
       val rdfModel = ModelFactory.createDefaultModel().read(new StringReader(payload), "", "JSON-LD")
 
-      Right(LinkedDataset(rdfModel))
+      Right(VC(rdfModel))
     } else {
       Left(InvalidSignature)
     }

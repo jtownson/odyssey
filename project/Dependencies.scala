@@ -7,28 +7,32 @@ object Dependencies {
 
   lazy val circe = Seq(
     "io.circe" %% "circe-core" % circeVersion,
-    "io.circe" %% "circe-generic" % circeVersion,
     "io.circe" %% "circe-parser" % circeVersion
   )
-
-  lazy val `json-ld-java` = Seq("com.github.jsonld-java" % "jsonld-java" % "0.13.0")
-
-  lazy val `ld-signatures-java` = Seq("info.weboftrust" % "ld-signatures-java" % "0.3-SNAPSHOT")
 
   lazy val `bouncy-castle` = Seq(
     "org.bouncycastle" % "bcprov-jdk15on" % "1.62",
     "org.bouncycastle" % "bcpkix-jdk15on" % "1.62"
   )
 
+  lazy val `json-ld-java` = Seq(
+    "com.github.jsonld-java" % "jsonld-java" % "0.13.0"
+  )
+
   lazy val jena = Seq(
-    "org.apache.jena" % "apache-jena-libs" % "3.14.0"
+    "org.apache.jena" % "apache-jena-libs" % "3.14.0" exclude ("commons-logging", "commons-logging")
   )
 
   lazy val jose = Seq(
     "org.bitbucket.b_c" % "jose4j" % "0.7.0"
   )
 
-  lazy val cats = Seq(
-    "org.typelevel" %% "cats-core" % "2.0.0"
+  lazy val scopt = Seq(
+    "com.github.scopt" %% "scopt" % "4.0.0-RC2"
   )
+
+  lazy val `slf4j-nop` = Seq(
+    "org.slf4j" % "slf4j-nop" % "1.7.26"
+  )
+
 }

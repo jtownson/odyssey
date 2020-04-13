@@ -3,7 +3,12 @@ package net.jtownson.odyssey.ld
 import java.io.File
 import java.io.File.separatorChar
 
-import net.jtownson.odyssey.ld.JsonLdApiSpec.withCompactManifest
+import io.circe.Decoder.Result
+import io.circe.parser
+import net.jtownson.odyssey.JsonLd
+import net.jtownson.odyssey.ld.JsonLdApiSpec.Test.{IgnoredTest, PositiveEvaluationTest, PositiveSyntaxTest}
+import net.jtownson.odyssey.ld.JsonLdApiSpec._
+import org.scalatest.Matchers._
 import org.scalatest._
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -12,14 +17,45 @@ import scala.concurrent.{Await, Future}
 import scala.io.Source
 import scala.language.postfixOps
 
-class JsonLdApiSpec extends FunSpec {
+class JsonLdApiSpec extends FlatSpec {
 
-//  def processor: JsonLdProcessor
+//  describe("compaction algorithm") {
+//    withCompactManifest { manifest =>
+//      manifest.sequence.foreach { test =>
+//        it(s"${test.id}, ${test.name}") {}
+//      }
+//    }
+//  }
 
-  describe("compact algorithm") {
-    withCompactManifest { manifest =>
-      manifest.sequence.foreach { test =>
-        it(s"${test.id}, ${test.name}") {}
+  def expansionPositiveEval(test: PositiveEvaluationTest): Assertion = {
+    if (test.id == "#t0001") {
+      println(s"Running the TEST")
+      val jsonLd = JsonLd.fromString(test.input)
+
+      val expand: JsonLd = jsonLd.expand
+
+      expand.json shouldBe parser.parse(test.input)
+    } else {
+      org.scalatest.Assertions.pending
+    }
+  }
+
+  def expansionPositiveSyntax(test: PositiveSyntaxTest): Assertion = {
+    org.scalatest.Assertions.pending
+  }
+
+  withExpandManifest { manifest =>
+    manifest.sequence.foreach { test =>
+      "expansion algorithm" should s"support ${test.id}, ${test.name}" in {
+        if (test.id == "#t0001") {
+          Test.fold[Assertion](
+            test => expansionPositiveEval(test),
+            test => JsonLdApiSpec.pending(test),
+            test => JsonLdApiSpec.pending(test),
+            test => JsonLdApiSpec.pending(test),
+            test => JsonLdApiSpec.pending(test)
+          )(test)
+        }
       }
     }
   }
@@ -31,8 +67,14 @@ object JsonLdApiSpec {
   import io.circe.parser._
   import org.scalatest.Assertions.fail
 
+  def pending(test: Test): Assertion = org.scalatest.Assertions.pending
+
   def withCompactManifest(testCode: TestManifest => Any): Unit = {
     testCode(Await.result(loadTestManifest("compact-manifest.jsonld"), 5 minutes))
+  }
+
+  def withExpandManifest(testCode: TestManifest => Any): Unit = {
+    testCode(Await.result(loadTestManifest("expand-manifest.jsonld"), 5 minutes))
   }
 
   case class TopLevelManifest(
@@ -54,48 +96,72 @@ object JsonLdApiSpec {
     val purpose: Option[String]
   }
 
-  case class PositiveEvaluationTest(
-      id: String,
-      name: String,
-      purpose: Option[String],
-      input: String,
-      context: Option[String],
-      expect: String
-  ) extends Test {}
+  object Test {
 
-  case class NegativeEvaluationTest(
-      id: String,
-      name: String,
-      purpose: Option[String],
-      input: String,
-      context: Option[String],
-      expectErrorCode: String
-  ) extends Test
+    def fold[T](
+        fPostiveEval: PositiveEvaluationTest => T,
+        fNegativeEval: NegativeEvaluationTest => T,
+        fPostiveSyntax: PositiveSyntaxTest => T,
+        fNegativeSyntax: NegativeSyntaxTest => T,
+        fIgnored: IgnoredTest => T
+    )(test: Test): T = test match {
+      case t @ PositiveEvaluationTest(id, name, purpose, input, context, expect) => fPostiveEval(t)
+      case t @ NegativeEvaluationTest(id, name, purpose, input, context, expectErrorCode) => fNegativeEval(t)
+      case t @ PositiveSyntaxTest(id, name, purpose) => fPostiveSyntax(t)
+      case t @ NegativeSyntaxTest(id, name, purpose) => fNegativeSyntax(t)
+      case t @ IgnoredTest(id, tpe, name, purpose, ignoredReason) => fIgnored(t)
+    }
 
-  case class PositiveSyntaxTest(
-      id: String,
-      name: String,
-      purpose: Option[String]
-  )
+    case class PositiveEvaluationTest(
+        id: String,
+        name: String,
+        purpose: Option[String],
+        input: String,
+        context: Option[String],
+        expect: String
+    ) extends Test
 
-  case class NegativeSyntaxTest(
-      id: String,
-      name: String,
-      purpose: Option[String]
-  )
+    case class NegativeEvaluationTest(
+        id: String,
+        name: String,
+        purpose: Option[String],
+        input: String,
+        context: Option[String],
+        expectErrorCode: String
+    ) extends Test
 
-  case class IgnoredTest(
-      id: String,
-      tpe: String,
-      name: String,
-      purpose: Option[String],
-      ignoredReason: String
-  ) extends Test
+    case class PositiveSyntaxTest(
+        id: String,
+        name: String,
+        purpose: Option[String]
+    ) extends Test
+
+    case class NegativeSyntaxTest(
+        id: String,
+        name: String,
+        purpose: Option[String]
+    ) extends Test
+
+    case class IgnoredTest(
+        id: String,
+        tpe: String,
+        name: String,
+        purpose: Option[String],
+        ignoredReason: String
+    ) extends Test
+  }
 
   object ACursorValues {
     implicit class A(aCursor: ACursor) {
-      def assume[T](implicit ev: Decoder[T]): T =
-        aCursor.as[T].getOrElse(fail())
+      def assume[T](implicit ev: Decoder[T]): T = {
+        val a: Result[T] = aCursor.as[T]
+        a match {
+          case Left(t) =>
+            fail(s"Invalid JSON assumption: ${t}")
+          case Right(value) =>
+            value
+        }
+      }
     }
   }
 
@@ -149,6 +215,7 @@ object JsonLdApiSpec {
 
     test.recover {
       case t =>
+        println(s"Recovering test ${id} due to $t")
         IgnoredTest(
           id,
           tpe,
@@ -198,7 +265,7 @@ object JsonLdApiSpec {
       name: String,
       purpose: Option[String]
   ): Future[Test] =
-    Future.unit.map(_ => IgnoredTest(id, tpe, name, purpose, "Test ignored"))
+    Future.successful(IgnoredTest(id, tpe, name, purpose, "Test ignored"))
 
   def manifestFile(path: String): File = {
     new File(
@@ -222,7 +289,7 @@ object JsonLdApiSpec {
     manifestSource(path).map(parse(_).getOrElse(fail()).hcursor)
 
   def loadDocAt(key: String, doc: HCursor): Future[String] = {
-    manifestSource(doc.downField(key).assume[String])
+    manifestSource("tests" + separatorChar + doc.downField(key).assume[String])
   }
 
   def maybeLoadDocAt(key: String, doc: HCursor): Future[Option[String]] = {

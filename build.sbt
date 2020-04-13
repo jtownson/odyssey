@@ -25,13 +25,21 @@ ThisBuild / scalacOptions := Seq(
 lazy val root = (project in file("."))
   .settings(
     name := "odyssey",
+    mainClass in (Compile, packageBin) := Some("net.jtownson.odyssey.VCP"),
+    assemblyMergeStrategy in assembly := {
+      case PathList("META-INF", "versions", xs @ _*) => MergeStrategy.first
+      case PathList("module-info.class", xs @ _*) => MergeStrategy.first
+      case PathList("org", "slf4j", xs @ _*) => MergeStrategy.first
+      case x => (assemblyMergeStrategy in assembly).value(x)
+    },
     libraryDependencies ++=
       circe ++
-        `json-ld-java` ++
         `bouncy-castle` ++
         jena ++
         jose ++
-        cats ++
+        scopt ++
+        `slf4j-nop` ++
+//        `json-ld-java` ++
         scalaTest
   )
 

@@ -5,13 +5,13 @@ import java.net.{URI, URL}
 import java.security.PrivateKey
 import java.time.{LocalDate, ZoneOffset}
 
-import net.jtownson.odyssey.LinkedDatasetBuilder.LinkedDatasetField
-import net.jtownson.odyssey.LinkedDatasetBuilder.LinkedDatasetField._
+import net.jtownson.odyssey.VCBuilder.LinkedDatasetField
+import net.jtownson.odyssey.VCBuilder.LinkedDatasetField._
 import net.jtownson.odyssey.RDFNode.{Literal, ResourceNode}
 import org.apache.jena.rdf.model.{Model, ModelFactory, Resource}
 import org.jose4j.jws.{AlgorithmIdentifiers, JsonWebSignature}
 
-case class LinkedDatasetBuilder[F <: LinkedDatasetField] private[odyssey] (
+case class VCBuilder[F <: LinkedDatasetField] private[odyssey] (
     nsMap: Map[String, String] = Map.empty,
     tpe: Option[String] = None,
     claims: Seq[(ResourceNode, URI, RDFNode)] = Seq.empty,
@@ -24,30 +24,30 @@ case class LinkedDatasetBuilder[F <: LinkedDatasetField] private[odyssey] (
     expiryDate: Option[LocalDate] = None,
     content: Option[String] = None
 ) {
-  def withIssuanceDate(iss: LocalDate): LinkedDatasetBuilder[F with IssuanceDateField] = {
+  def withIssuanceDate(iss: LocalDate): VCBuilder[F with IssuanceDateField] = {
     copy(issuanceDate = Some(iss))
   }
 
-  def withExpiryDate(exp: LocalDate): LinkedDatasetBuilder[F with ExpiryDateField] = {
+  def withExpiryDate(exp: LocalDate): VCBuilder[F with ExpiryDateField] = {
     copy(expiryDate = Some(exp))
   }
 
-  def withNamespaces(nsMappings: (String, String)*): LinkedDatasetBuilder[F with ContextField] = {
+  def withNamespaces(nsMappings: (String, String)*): VCBuilder[F with ContextField] = {
     copy(nsMap = nsMappings.toMap)
   }
 
-  def withStatements(values: (ResourceNode, URI, RDFNode)*): LinkedDatasetBuilder[F with ClaimsField] = {
+  def withStatements(values: (ResourceNode, URI, RDFNode)*): VCBuilder[F with ClaimsField] = {
     copy(claims = values)
   }
 
-  def withCredentialSubject(subject: ResourceNode, statements: (URI, RDFNode)*): LinkedDatasetBuilder[F with ClaimsField] = {
+  def withCredentialSubject(subject: ResourceNode, statements: (URI, RDFNode)*): VCBuilder[F with ClaimsField] = {
     copy(subject = Some(subject), subjectStatements = statements)
   }
 
   def withEcdsaSecp256k1Signature2019(
       publicKeyRef: URL,
       privateKey: PrivateKey
-  ): LinkedDatasetBuilder[F with SignatureField] = {
+  ): VCBuilder[F with SignatureField] = {
     copy(
       privateKey = Some(privateKey),
       publicKeyRef = Some(publicKeyRef),
@@ -55,7 +55,7 @@ case class LinkedDatasetBuilder[F <: LinkedDatasetField] private[odyssey] (
     )
   }
 
-  def withContent(content: String): LinkedDatasetBuilder[F with ContentField] = {
+  def withContent(content: String): VCBuilder[F with ContentField] = {
     copy(content = Some(content))
   }
 
@@ -90,7 +90,7 @@ case class LinkedDatasetBuilder[F <: LinkedDatasetField] private[odyssey] (
 
   def toProto(implicit ev: F <:< MandatoryFields): Array[Byte] = ??? // TODO?
 
-  private def build: LinkedDataset = {
+  private def build: VC = {
 
     def toJenaResource(n: ResourceNode, model: Model): Resource = {
       ResourceNode.fold(uri => model.createResource(uri.toString), _ => ???)(n)
@@ -126,13 +126,13 @@ case class LinkedDatasetBuilder[F <: LinkedDatasetField] private[odyssey] (
       accModel.add(statement)
     }
 
-    new LinkedDataset(claimModel)
+    new VC(claimModel)
   }
 }
 
-object LinkedDatasetBuilder {
+object VCBuilder {
 
-  def apply(): LinkedDatasetBuilder[EmptyField] = LinkedDatasetBuilder[EmptyField]()
+  def apply(): VCBuilder[EmptyField] = VCBuilder[EmptyField]()
 
   sealed trait LinkedDatasetField
 

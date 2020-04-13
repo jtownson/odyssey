@@ -17,7 +17,7 @@ class VerificationAndSigningSketch extends FlatSpec {
   val subject = new URI("did:ata:abc123")
 
   // Define those statements...
-  val claims = LinkedDataset
+  val claims = VC
     .withIssuanceDate(LocalDate.of(2020, 1, 1))
     .withExpiryDate(LocalDate.of(2021, 1, 1))
     .withNamespaces("f" -> "http://xmlns.com/foaf/0.1/")
@@ -47,7 +47,7 @@ class VerificationAndSigningSketch extends FlatSpec {
   println(jws)
 
   // ... somewhere else, another app, another part of the system, we obtain the json/proto...
-  val parseE: Either[VerificationError, LinkedDataset] = LinkedDataset.fromJws(jws)
+  val parseE: Either[VerificationError, VC] = VC.fromJws(jws)
 
   parseE match {
     case Right(linkedDataset) =>
@@ -62,4 +62,3 @@ class VerificationAndSigningSketch extends FlatSpec {
       println(s"Error: $error")
   }
 }
-

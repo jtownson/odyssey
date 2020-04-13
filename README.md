@@ -23,7 +23,7 @@ val subject = DID(method = "ata", suffix = "abc123")
 
 val context = Context.fromURL("https://json-ld.org/contexts/person.jsonld")
 
-val claims = LinkedDataset.withContext(context).withType("Person").withStatements(
+val claims = VC.withContext(context).withType("Person").withStatements(
   subject -> "email" -> "mailto:john.doe@example.com",
   subject -> "telephone" -> "01101 110123",
   subject -> "address" -> "Buckingham Palace, SW1A 1AA"
@@ -84,7 +84,7 @@ val subject = DID(method = "ata", suffix = "abc123")
 
 val context = Context.fromURL("http://schema.org")
 
-val vc = VerifiableCredential.mergeContext(context)
+val vc = VC.mergeContext(context)
   .withSubject(subject)
   .withIssuanceDate(LocalDate.now())
   .withExpiryDate(LocalDate.now().plusYears(1))
@@ -94,7 +94,7 @@ val vc = VerifiableCredential.mergeContext(context)
 
 val circeJsonVc = vc.toJson
 
-val incomingVcF: Future[VerifiableCredential] = VerifiableCredential.fromJson(json)
+val incomingVcF: Future[VC] = VC.fromJson(json)
 
 incomingVcF.onComplete { 
   case Success(claims) =>
