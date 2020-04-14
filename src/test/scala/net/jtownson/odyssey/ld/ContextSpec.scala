@@ -1,8 +1,8 @@
-package net.jtownson.odyssey
+package net.jtownson.odyssey.ld
 
 import io.circe.Json
-import net.jtownson.odyssey.Context.TermDefinition
-import net.jtownson.odyssey.TestUtil.resourceSource
+import TestUtil.resourceSource
+import net.jtownson.odyssey.ld.Context.TermDefinition
 import org.scalatest.FlatSpec
 import org.scalatest.Matchers._
 

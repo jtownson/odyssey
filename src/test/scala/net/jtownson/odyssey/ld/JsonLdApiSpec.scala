@@ -5,7 +5,6 @@ import java.io.File.separatorChar
 
 import io.circe.Decoder.Result
 import io.circe.parser
-import net.jtownson.odyssey.JsonLd
 import net.jtownson.odyssey.ld.JsonLdApiSpec.Test.{IgnoredTest, PositiveEvaluationTest, PositiveSyntaxTest}
 import net.jtownson.odyssey.ld.JsonLdApiSpec._
 import org.scalatest.Matchers._

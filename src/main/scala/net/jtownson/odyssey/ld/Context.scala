@@ -1,10 +1,10 @@
-package net.jtownson.odyssey
+package net.jtownson.odyssey.ld
 
 import java.util.regex.Pattern
 
 import io.circe.Json
 import io.circe.parser.parse
-import net.jtownson.odyssey.Context.{TermDefinition, curiePattern}
+import net.jtownson.odyssey.ld.Context.{TermDefinition, curiePattern}
 
 /*
 From https://www.w3.org/TR/json-ld11/#context-definitions:

@@ -1,11 +1,10 @@
-package net.jtownson.odyssey
+package net.jtownson.odyssey.ld
 
 import java.util.regex.Pattern
 
-import io.circe.Json.{JBoolean, JNumber, JString}
 import io.circe.parser.parse
 import io.circe.{Json, JsonObject, Printer}
-import net.jtownson.odyssey.JsonLd.expandJson
+import net.jtownson.odyssey.ld.JsonLd.expandJson
 
 class JsonLd private[odyssey] (val json: Json) {
 

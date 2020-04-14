@@ -1,4 +1,4 @@
-package net.jtownson.odyssey
+package net.jtownson.odyssey.ld
 
 import java.io.File
 import java.io.File.separatorChar

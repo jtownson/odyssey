@@ -1,7 +1,7 @@
-package net.jtownson.odyssey
+package net.jtownson.odyssey.ld
 
 import io.circe.JsonNumber
-import net.jtownson.odyssey.TestUtil.resourceSource
+import TestUtil.resourceSource
 import org.scalatest.FlatSpec
 import org.scalatest.Matchers._
 
