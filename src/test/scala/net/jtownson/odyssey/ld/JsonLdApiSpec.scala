@@ -29,12 +29,11 @@ class JsonLdApiSpec extends FlatSpec {
 
   def expansionPositiveEval(test: PositiveEvaluationTest): Assertion = {
     if (test.id == "#t0001") {
-      println(s"Running the TEST")
       val jsonLd = JsonLd.fromString(test.input)
 
       val expand: JsonLd = jsonLd.expand
 
-      expand.json shouldBe parser.parse(test.input)
+      expand.json shouldBe parser.parse(test.expect).getOrElse(fail("Invalid test data"))
     } else {
       org.scalatest.Assertions.pending
     }
