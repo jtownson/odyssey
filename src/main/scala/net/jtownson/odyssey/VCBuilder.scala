@@ -1,47 +1,43 @@
 package net.jtownson.odyssey
 
-import java.io.StringWriter
 import java.net.{URI, URL}
 import java.security.PrivateKey
-import java.time.{LocalDate, ZoneOffset}
+import java.time.LocalDateTime
 
+import io.circe.{Json, JsonObject}
+import net.jtownson.odyssey.VC.{ParsedVc, SerializedJwsVC}
 import net.jtownson.odyssey.VCBuilder.LinkedDatasetField
 import net.jtownson.odyssey.VCBuilder.LinkedDatasetField._
-import net.jtownson.odyssey.RDFNode.{Literal, ResourceNode}
-import org.apache.jena.rdf.model.{Model, ModelFactory, Resource}
-import org.jose4j.jws.{AlgorithmIdentifiers, JsonWebSignature}
+import org.jose4j.jws.AlgorithmIdentifiers
 
 case class VCBuilder[F <: LinkedDatasetField] private[odyssey] (
-    nsMap: Map[String, String] = Map.empty,
-    tpe: Option[String] = None,
-    claims: Seq[(ResourceNode, URI, RDFNode)] = Seq.empty,
-    subject: Option[ResourceNode] = None,
-    subjectStatements: Seq[(URI, RDFNode)] = Seq.empty,
+    id: Option[String] = None,
+    issuer: Option[URI] = None,
+    subjects: Seq[JsonObject] = Seq.empty,
     privateKey: Option[PrivateKey] = None,
     publicKeyRef: Option[URL] = None,
     signatureAlgo: Option[String] = None,
-    issuanceDate: Option[LocalDate] = None,
-    expiryDate: Option[LocalDate] = None,
-    content: Option[String] = None
+    issuanceDate: Option[LocalDateTime] = None,
+    expirationDate: Option[LocalDateTime] = None,
 ) {
-  def withIssuanceDate(iss: LocalDate): VCBuilder[F with IssuanceDateField] = {
+  def withId(id: String): VCBuilder[F with IdField] = {
+    copy(id = Some(id))
+  }
+
+  def withIssuer(issuer: URI): VCBuilder[F with IssuerField] = {
+    copy(issuer = Some(issuer))
+  }
+
+  def withIssuanceDate(iss: LocalDateTime): VCBuilder[F with IssuanceDateField] = {
     copy(issuanceDate = Some(iss))
   }
 
-  def withExpiryDate(exp: LocalDate): VCBuilder[F with ExpiryDateField] = {
-    copy(expiryDate = Some(exp))
+  def withExpirationDate(exp: LocalDateTime): VCBuilder[F with ExpirationDateField] = {
+    copy(expirationDate = Some(exp))
   }
 
-  def withNamespaces(nsMappings: (String, String)*): VCBuilder[F with ContextField] = {
-    copy(nsMap = nsMappings.toMap)
-  }
-
-  def withStatements(values: (ResourceNode, URI, RDFNode)*): VCBuilder[F with ClaimsField] = {
-    copy(claims = values)
-  }
-
-  def withCredentialSubject(subject: ResourceNode, statements: (URI, RDFNode)*): VCBuilder[F with ClaimsField] = {
-    copy(subject = Some(subject), subjectStatements = statements)
+  def withCredentialSubject(claims: (String, Json)*): VCBuilder[F with ClaimsField] = {
+    copy(subjects = Seq(JsonObject(claims: _*)))
   }
 
   def withEcdsaSecp256k1Signature2019(
@@ -55,78 +51,12 @@ case class VCBuilder[F <: LinkedDatasetField] private[odyssey] (
     )
   }
 
-  def withContent(content: String): VCBuilder[F with ContentField] = {
-    copy(content = Some(content))
-  }
+  def toJws: String = build.jws
 
-  def toJWS(implicit ev: F <:< MandatoryFields): String = {
-
-    def createSignature(payload: String): Option[String] = {
-      for {
-        key <- privateKey
-        kid <- publicKeyRef
-        algo <- signatureAlgo
-      } yield {
-        val jws: JsonWebSignature = new JsonWebSignature()
-        jws.setPayload(payload)
-        jws.setAlgorithmHeaderValue(algo)
-        jws.setKey(key)
-        jws.setHeader("kid", kid.toString)
-
-        issuanceDate.foreach(iss => jws.setHeader("nbf", iss.atStartOfDay().toEpochSecond(ZoneOffset.UTC)))
-        expiryDate.foreach(exp => jws.setHeader("exp", exp.atStartOfDay().toEpochSecond(ZoneOffset.UTC)))
-
-        jws.getCompactSerialization
-      }
-    }
-    val sw = new StringWriter()
-    build.rdfModel.write(sw, "JSON-LD")
-    val jsonLdSer = sw.toString
-
-    createSignature(jsonLdSer).getOrElse(
-      throw new IllegalStateException("SignatureField manadatory. This should not compile.")
-    )
-  }
-
-  def toProto(implicit ev: F <:< MandatoryFields): Array[Byte] = ??? // TODO?
-
-  private def build: VC = {
-
-    def toJenaResource(n: ResourceNode, model: Model): Resource = {
-      ResourceNode.fold(uri => model.createResource(uri.toString), _ => ???)(n)
-    }
-
-    def toJenaNode(n: RDFNode, model: Model): org.apache.jena.rdf.model.RDFNode = {
-      RDFNode.fold(
-        uri => model.createResource(uri.toString),
-        _ => ???,
-        (lex, dataType, maybeLang) => {
-          maybeLang.fold(createTypedLiteral(lex, dataType, model))(lang => model.createLiteral(lex, lang))
-        }
-      )(n)
-    }
-
-    def createTypedLiteral(lex: String, dataType: URI, model: Model) = {
-      if (dataType == Literal.stringType)
-        model.createLiteral(lex)
-      else
-        model.createTypedLiteral(lex, dataType.toString)
-    }
-
-    import scala.jdk.CollectionConverters._
-    val rdfModel = ModelFactory.createDefaultModel().setNsPrefixes(nsMap.asJava)
-
-    val claimModel = claims.foldLeft(rdfModel) { (accModel, next) =>
-      val (subj, pred, obj) = next
-      val statement = accModel.createStatement(
-        toJenaResource(subj, accModel),
-        accModel.createProperty(pred.toString),
-        toJenaNode(obj, accModel)
-      )
-      accModel.add(statement)
-    }
-
-    new VC(claimModel)
+  private def build: SerializedJwsVC = {
+    val vc = ParsedVc(id, issuer.get, issuanceDate, expirationDate, subjects)
+    val jws = JwsCodec.encodeJws(privateKey.get, publicKeyRef.get, signatureAlgo.get, vc)
+    SerializedJwsVC(id, issuer.get, issuanceDate, expirationDate, subjects, jws)
   }
 }
 
@@ -137,17 +67,17 @@ object VCBuilder {
   sealed trait LinkedDatasetField
 
   object LinkedDatasetField {
+    sealed trait IdField extends LinkedDatasetField
     sealed trait EmptyField extends LinkedDatasetField
     sealed trait ContextField extends LinkedDatasetField
+    sealed trait SubjectField extends LinkedDatasetField
+    sealed trait ExpirationDateField extends LinkedDatasetField
     sealed trait ClaimsField extends LinkedDatasetField
-    sealed trait SubjectStatementsField extends LinkedDatasetField
     sealed trait SignatureField extends LinkedDatasetField
     sealed trait ContentField extends LinkedDatasetField
-    sealed trait ExpirationDateField extends LinkedDatasetField
     sealed trait IssuerField extends LinkedDatasetField
     sealed trait IssuanceDateField extends LinkedDatasetField
-    sealed trait ExpiryDateField extends LinkedDatasetField
 
-    type MandatoryFields = EmptyField with SignatureField with IssuanceDateField
+    type MandatoryFields = EmptyField with IssuerField with IssuanceDateField with SubjectField with SignatureField
   }
 }

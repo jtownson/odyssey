@@ -6,6 +6,9 @@ import scopt.OParser
 import scala.io.Source
 import scala.util.Using
 
+/**
+ * Embryonic app to enable running the verifiable credentials test suite.
+ */
 object VCP extends App {
 //  import ch.qos.logback.classic.util.ContextInitializer
 //  System.setProperty(ContextInitializer.CONFIG_FILE_PROPERTY, "/logback.xml")
@@ -34,8 +37,9 @@ object VCP extends App {
     case Some(config) =>
       config.file.foreach { file =>
         Using(Source.fromFile(file, "UTF-8"))(_.mkString).foreach { jsonLd =>
-          val out = VC.fromJsonLd(jsonLd)
-          out.rdfModel.write(System.out, "JSON-LD")
+          // TODO
+//          val out = VC.fromJsonLd(jsonLd)
+//          out.rdfModel.write(System.out, "JSON-LD")
         }
       }
     case _ =>

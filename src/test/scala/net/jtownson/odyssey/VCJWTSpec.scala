@@ -1,40 +1,12 @@
 package net.jtownson.odyssey
 
-import java.io.StringReader
-
-import com.github.jsonldjava.core.{JsonLdApi, JsonLdProcessor}
-import org.apache.jena.rdf.model.ModelFactory
 import org.scalatest.FlatSpec
 
 class VCJWTSpec extends FlatSpec {
 
-  "this" should "work" in {
-    val jsonLd = s"""
-       |{
-       |  "@context": [
-       |    "https://www.w3.org/2018/credentials/v1",
-       |    "https://www.w3.org/2018/credentials/examples/v1"
-       |  ],
-       |  "id": "http://example.edu/credentials/58473",
-       |  "type": ["VerifiableCredential", "AlumniCredential"],
-       |  "issuer": "https://example.edu/issuers/14",
-       |  "issuanceDate": "2010-01-01T19:23:24Z",
-       |  "credentialSubject": {
-       |    "id": "did:example:ebfeb1f712ebc6f1c276e12ec21",
-       |    "alumniOf": "Example University"
-       |  },
-       |  "proof": {
-       |    "type": "RsaSignature2018"
-       |  }
-       |}
-       |""".stripMargin
-
-    val rdfModel = ModelFactory.createDefaultModel().read(new StringReader(jsonLd), "", "JSON-LD")
-    println(rdfModel)
 //    val value = JsonLdProcessor.toRDF(jsonLd)
 //    println(value)
 //      new JsonLdApi().com.github.jsonldjava.utils.JsonUtils.fromString(jsonLd)
-  }
   /*
  The following rules apply to JOSE headers in the context of this specification:
 

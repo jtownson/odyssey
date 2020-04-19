@@ -101,23 +101,27 @@ object JsonLd {
     val asMap = jsonObject.toMap
     val maybeLocalContext = asMap.get("@context").map(json => new Context(json))
     val activeContext = maybeLocalContext.fold(context)(localContext => context.pushContext(localContext))
-    val expandedMap = asMap.map { case (key, value) =>
-      val maybeTerm = expandIRI(activeContext, key)
-      maybeTerm match {
-        case Some(term) =>
-          val v = value.fold(
-            Json.Null,
-            b => Json.fromBoolean(b),
-            n => Json.fromJsonNumber(n),
-            s => expandValue(activeContext, activeProperty, Json.fromString(s)),
-            arr => ???,
-            jobj => expandObject(context, activeProperty, jobj)
-          )
-          Some(term -> v)
-        case None =>
-          None
+    val expandedMap = asMap
+      .map {
+        case (key, value) =>
+          val maybeTerm = expandIRI(activeContext, key)
+          maybeTerm match {
+            case Some(term) =>
+              val v = value.fold(
+                Json.Null,
+                b => Json.fromBoolean(b),
+                n => Json.fromJsonNumber(n),
+                s => expandValue(activeContext, activeProperty, Json.fromString(s)),
+                arr => ???,
+                jobj => expandObject(context, activeProperty, jobj)
+              )
+              Some(term -> v)
+            case None =>
+              None
+          }
       }
-    }.filter(_.isDefined).map(_.get)
+      .filter(_.isDefined)
+      .map(_.get)
 
     Json.fromFields(expandedMap)
   }

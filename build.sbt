@@ -35,11 +35,9 @@ lazy val root = (project in file("."))
     libraryDependencies ++=
       circe ++
         `bouncy-castle` ++
-        jena ++
         jose ++
         scopt ++
         `slf4j-nop` ++
-//        `json-ld-java` ++
         scalaTest
   )
 

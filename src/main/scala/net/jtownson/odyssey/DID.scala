@@ -6,8 +6,7 @@ case class DID private (value: URL)
 
 object DID {
 
-  // define did: as a valid URL prefix and provide the JDK with
-  // a way to resolve did: URLs.
+  // possibly makes sense to provide the JDK with a way to resolve DIDs as other URLs
   URL.setURLStreamHandlerFactory(new DIDStreamHandlerFactory())
 
   def apply(method: String, suffix: String): DID = {
