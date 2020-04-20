@@ -1,15 +1,13 @@
 package net.jtownson.odyssey
 
 import java.net.{URI, URL}
-import java.time.{LocalDateTime, ZoneId}
 import java.time.format.DateTimeFormatter
-import java.time.temporal.TemporalAccessor
+import java.time.{LocalDateTime, ZoneId}
 
 import io.circe.Json.obj
-import io.circe.syntax._
 import io.circe._
 import io.circe.parser.decode
-import net.jtownson.odyssey.VC.ParsedVc
+import io.circe.syntax._
 import net.jtownson.odyssey.VerificationError.ParseError
 
 /**
@@ -23,8 +21,10 @@ object JsonCodec {
   private implicit val uriEncoder: Encoder[URI] = Encoder[String].contramap(_.toString)
   private implicit val uriDecoder: Decoder[URI] = Decoder[String].map(new URI(_))
 
-  private implicit val localDateTimeEncoder: Encoder[LocalDateTime] = Encoder[String].contramap(d => dfRfc3339.format(d))
-  private implicit val localDateTimeDecoder: Decoder[LocalDateTime] = Decoder[String].map(dateStr => LocalDateTime.from(dfRfc3339.parse(dateStr)))
+  private implicit val localDateTimeEncoder: Encoder[LocalDateTime] =
+    Encoder[String].contramap(d => dfRfc3339.format(d))
+  private implicit val localDateTimeDecoder: Decoder[LocalDateTime] =
+    Decoder[String].map(dateStr => LocalDateTime.from(dfRfc3339.parse(dateStr)))
 
   private val dfRfc3339 = DateTimeFormatter
     .ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'")
@@ -68,7 +68,7 @@ object JsonCodec {
         credentialSubject <- hc.downField("credentialSubject").as[Json]
       } yield {
         val subject: Seq[JsonObject] = foldCredentialSubject(credentialSubject)
-        ParsedVc(id, issuer, issuanceDate, expirationDate, types, contexts, subject)
+        VC(id, issuer, issuanceDate, expirationDate, types, contexts, subject)
       }
     }
   }

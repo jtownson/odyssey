@@ -5,11 +5,10 @@ import java.security.PrivateKey
 import java.time.LocalDateTime
 
 import io.circe.{Json, JsonObject}
-import net.jtownson.odyssey.VC.{ParsedVc, SerializedJwsVC}
 import net.jtownson.odyssey.VCBuilder.LinkedDatasetField
 import net.jtownson.odyssey.VCBuilder.LinkedDatasetField._
+import net.jtownson.odyssey.syntax._
 import org.jose4j.jws.AlgorithmIdentifiers
-import syntax._
 
 case class VCBuilder[F <: LinkedDatasetField] private[odyssey] (
     types: Seq[String] = Seq("VerifiableCredential"),
@@ -62,12 +61,9 @@ case class VCBuilder[F <: LinkedDatasetField] private[odyssey] (
     )
   }
 
-  def toJws: String = build.jws
-
-  private def build: SerializedJwsVC = {
-    val vc = ParsedVc(id, issuer.get, issuanceDate, expirationDate, types, contexts, subjects)
-    val jws = JwsCodec.encodeJws(privateKey.get, publicKeyRef.get, signatureAlgo.get, vc)
-    SerializedJwsVC(id, issuer.get, issuanceDate, expirationDate, types, contexts, subjects, jws)
+  def toJws: String = {
+    val vc = VC(id, issuer.get, issuanceDate, expirationDate, types, contexts, subjects)
+    JwsCodec.encodeJws(privateKey.get, publicKeyRef.get, signatureAlgo.get, vc)
   }
 }
 
