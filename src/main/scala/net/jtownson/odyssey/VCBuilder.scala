@@ -9,8 +9,11 @@ import net.jtownson.odyssey.VC.{ParsedVc, SerializedJwsVC}
 import net.jtownson.odyssey.VCBuilder.LinkedDatasetField
 import net.jtownson.odyssey.VCBuilder.LinkedDatasetField._
 import org.jose4j.jws.AlgorithmIdentifiers
+import syntax._
 
 case class VCBuilder[F <: LinkedDatasetField] private[odyssey] (
+    types: Seq[String] = Seq("VerifiableCredential"),
+    contexts: Seq[URI] = Seq("https://www.w3.org/2018/credentials/v1"),
     id: Option[String] = None,
     issuer: Option[URI] = None,
     subjects: Seq[JsonObject] = Seq.empty,
@@ -20,7 +23,7 @@ case class VCBuilder[F <: LinkedDatasetField] private[odyssey] (
     issuanceDate: Option[LocalDateTime] = None,
     expirationDate: Option[LocalDateTime] = None,
 ) {
-  def withId(id: String): VCBuilder[F with IdField] = {
+  def withId(id: String): VCBuilder[F] = {
     copy(id = Some(id))
   }
 
@@ -28,16 +31,24 @@ case class VCBuilder[F <: LinkedDatasetField] private[odyssey] (
     copy(issuer = Some(issuer))
   }
 
-  def withIssuanceDate(iss: LocalDateTime): VCBuilder[F with IssuanceDateField] = {
+  def withIssuanceDate(iss: LocalDateTime): VCBuilder[F] = {
     copy(issuanceDate = Some(iss))
   }
 
-  def withExpirationDate(exp: LocalDateTime): VCBuilder[F with ExpirationDateField] = {
+  def withExpirationDate(exp: LocalDateTime): VCBuilder[F] = {
     copy(expirationDate = Some(exp))
   }
 
-  def withCredentialSubject(claims: (String, Json)*): VCBuilder[F with ClaimsField] = {
+  def withCredentialSubject(claims: (String, Json)*): VCBuilder[F with CredentialSubjectField] = {
     copy(subjects = Seq(JsonObject(claims: _*)))
+  }
+
+  def withAdditionalType(tpe: String): VCBuilder[F] = {
+    copy(types = types :+ tpe)
+  }
+
+  def withAdditionalContext(ctx: URI): VCBuilder[F] = {
+    copy(contexts = contexts :+ ctx)
   }
 
   def withEcdsaSecp256k1Signature2019(
@@ -54,9 +65,9 @@ case class VCBuilder[F <: LinkedDatasetField] private[odyssey] (
   def toJws: String = build.jws
 
   private def build: SerializedJwsVC = {
-    val vc = ParsedVc(id, issuer.get, issuanceDate, expirationDate, subjects)
+    val vc = ParsedVc(id, issuer.get, issuanceDate, expirationDate, types, contexts, subjects)
     val jws = JwsCodec.encodeJws(privateKey.get, publicKeyRef.get, signatureAlgo.get, vc)
-    SerializedJwsVC(id, issuer.get, issuanceDate, expirationDate, subjects, jws)
+    SerializedJwsVC(id, issuer.get, issuanceDate, expirationDate, types, contexts, subjects, jws)
   }
 }
 
@@ -67,17 +78,11 @@ object VCBuilder {
   sealed trait LinkedDatasetField
 
   object LinkedDatasetField {
-    sealed trait IdField extends LinkedDatasetField
     sealed trait EmptyField extends LinkedDatasetField
-    sealed trait ContextField extends LinkedDatasetField
-    sealed trait SubjectField extends LinkedDatasetField
-    sealed trait ExpirationDateField extends LinkedDatasetField
-    sealed trait ClaimsField extends LinkedDatasetField
+    sealed trait CredentialSubjectField extends LinkedDatasetField
     sealed trait SignatureField extends LinkedDatasetField
-    sealed trait ContentField extends LinkedDatasetField
     sealed trait IssuerField extends LinkedDatasetField
-    sealed trait IssuanceDateField extends LinkedDatasetField
 
-    type MandatoryFields = EmptyField with IssuerField with IssuanceDateField with SubjectField with SignatureField
+    type MandatoryFields = EmptyField with IssuerField with CredentialSubjectField with SignatureField
   }
 }

@@ -11,6 +11,8 @@ trait VC {
   def issuer: URI
   def issuanceDate: Option[LocalDateTime]
   def expirationDate: Option[LocalDateTime]
+  def types: Seq[String]
+  def contexts: Seq[URI]
   // ... plus other data model fields defined in the spec
 
   def claims: Seq[JsonObject]
@@ -33,6 +35,8 @@ object VC {
       issuer: URI,
       issuanceDate: Option[LocalDateTime],
       expirationDate: Option[LocalDateTime],
+      types: Seq[String],
+      contexts: Seq[URI],
       claims: Seq[JsonObject],
       jws: String
   ) extends VC
@@ -42,6 +46,8 @@ object VC {
       issuer: URI,
       issuanceDate: Option[LocalDateTime],
       expirationDate: Option[LocalDateTime],
+      types: Seq[String],
+      contexts: Seq[URI],
       claims: Seq[JsonObject]
   ) extends VC
 

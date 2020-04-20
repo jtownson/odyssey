@@ -25,15 +25,19 @@ object VcJsonCodec {
   def vcJsonEncoder: Encoder[VC] = {
     Encoder.instance { vc: VC =>
       obj(
-        "@context" -> Seq("https://www.w3.org/2018/credentials/v1").asJson,
+        "@context" -> strOrArr(vc.contexts),
         "id" -> vc.id.map(_.asJson).getOrElse(Json.Null),
-        "type" -> Seq("VerifiableCredential").asJson,
+        "type" -> strOrArr(vc.types),
         "issuer" -> vc.issuer.asJson,
         "issuanceDate" -> vc.issuanceDate.map(ldt => df.format(ldt).asJson).getOrElse(Json.Null),
         "expirationDate" -> vc.expirationDate.map(ldt => df.format(ldt).asJson).getOrElse(Json.Null),
-        "credentialSubject" -> (if (vc.claims.length == 1) vc.claims.head.asJson else vc.claims.asJson)
+        "credentialSubject" -> strOrArr(vc.claims)
       ).dropNullValues
     }
+  }
+
+  private def strOrArr[T: Encoder](v: Seq[T]): Json = {
+    if (v.length == 1) v.head.asJson else v.asJson
   }
 
   def vcJsonDecoder
@@ -41,6 +45,8 @@ object VcJsonCodec {
     Decoder.instance { hc: HCursor =>
       for {
         id <- hc.downField("id").as[Option[String]]
+        types <- hc.downField("type").as[Seq[String]]
+        contexts <- hc.downField("@context").as[Seq[URI]]
         issuer <- hc.downField("issuer").as[URI]
         issuanceDate <- hc.downField("issuanceDate").as[Option[LocalDateTime]]
         expirationDate <- hc.downField("expirationDate").as[Option[LocalDateTime]]
@@ -48,7 +54,7 @@ object VcJsonCodec {
       } yield {
         val subject: Seq[JsonObject] = foldCredentialSubject(credentialSubject)
 
-        ParsedVc(id, issuer, issuanceDate, expirationDate, subject)
+        ParsedVc(id, issuer, issuanceDate, expirationDate, types, contexts, subject)
       }
     }
   }
