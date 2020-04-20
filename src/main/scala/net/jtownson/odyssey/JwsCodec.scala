@@ -18,7 +18,7 @@ object JwsCodec {
     val jws: JsonWebSignature = new JsonWebSignature()
     jws.setAlgorithmHeaderValue(signatureAlgo)
     jws.setKey(privateKey)
-    jws.getHeaders.setObjectHeaderValue("vc", VcJsonCodec.vcJsonEncoder(vc).printWith(Printer.spaces2))
+    jws.getHeaders.setObjectHeaderValue("vc", JsonCodec.vcJsonEncoder(vc).printWith(Printer.spaces2))
     jws.setKeyIdHeaderValue(publicKeyRef.toString)
     jws.setContentTypeHeaderValue("application/vc+json+jwt")
     jws.setHeader("iss", vc.issuer.toString)
@@ -56,7 +56,7 @@ object JwsCodec {
       val issuanceDate = optionalTimestampHeader(jws, "nbf")
       val expirationDate = optionalTimestampHeader(jws, "exp")
 
-      decode[VC](vc)(VcJsonCodec.vcJsonDecoder).left.map(_ => ParseError)
+      decode[VC](vc)(JsonCodec.vcJsonDecoder).left.map(_ => ParseError)
 
     } else {
       Left(InvalidSignature)

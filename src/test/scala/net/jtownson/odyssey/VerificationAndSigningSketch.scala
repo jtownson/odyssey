@@ -44,7 +44,7 @@ class VerificationAndSigningSketch extends FlatSpec {
     case Right(vc) =>
       // great, we have our data back
       println(s"Received dataset has valid signature and decodes to the following dataset:")
-      println(VcJsonCodec.vcJsonEncoder(vc).printWith(Printer.spaces2))
+      println(JsonCodec.vcJsonEncoder(vc).printWith(Printer.spaces2))
     case Left(error) =>
       // oh dear, there must have been either:
       // a (network) problem resolving the verification public key

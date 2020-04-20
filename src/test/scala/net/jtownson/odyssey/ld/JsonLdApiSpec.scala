@@ -45,15 +45,15 @@ class JsonLdApiSpec extends FlatSpec {
   withExpandManifest { manifest =>
     manifest.sequence.foreach { test =>
       "expansion algorithm" should s"support ${test.id}, ${test.name}" in {
-        if (test.id == "#t0001") {
-          Test.fold[Assertion](
-            test => expansionPositiveEval(test),
-            test => JsonLdApiSpec.pending(test),
-            test => JsonLdApiSpec.pending(test),
-            test => JsonLdApiSpec.pending(test),
-            test => JsonLdApiSpec.pending(test)
-          )(test)
-        }
+//        if (test.id == "#t0001") {
+//          Test.fold[Assertion](
+//            test => expansionPositiveEval(test),
+//            test => JsonLdApiSpec.pending(test),
+//            test => JsonLdApiSpec.pending(test),
+//            test => JsonLdApiSpec.pending(test),
+//            test => JsonLdApiSpec.pending(test)
+//          )(test)
+//        }
       }
     }
   }

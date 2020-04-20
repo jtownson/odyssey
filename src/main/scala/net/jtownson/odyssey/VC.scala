@@ -51,7 +51,7 @@ object VC {
       claims: Seq[JsonObject]
   ) extends VC
 
-  def fromJws(jwsSer: String): Either[VerificationError, VC] = JwsCodec.decodeJws(jwsSer)
-
   def apply(): VCBuilder[EmptyField] = VCBuilder()
+  def fromJws(jwsSer: String): Either[VerificationError, VC] = JwsCodec.decodeJws(jwsSer)
+  def fromJsonLd(jsonLdSer: String): Either[VerificationError, VC] = JsonCodec.decodeJsonLd(jsonLdSer)
 }

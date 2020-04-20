@@ -1,14 +1,15 @@
 package net.jtownson.odyssey
 import java.io.{File, FileOutputStream, FileWriter, PrintWriter}
 
+import io.circe.{Json, Printer}
 import scopt.OParser
 
 import scala.io.Source
 import scala.util.Using
 
 /**
- * Embryonic app to enable running the verifiable credentials test suite.
- */
+  * Embryonic app to enable running the verifiable credentials test suite.
+  */
 object VCP extends App {
 //  import ch.qos.logback.classic.util.ContextInitializer
 //  System.setProperty(ContextInitializer.CONFIG_FILE_PROPERTY, "/logback.xml")
@@ -20,30 +21,19 @@ object VCP extends App {
       .action((file, c) => c.copy(file = Some(file)))
       .text("Input VC")
   )
-//  OParser.sequence(
-//    programName("ConnectorClient"),
-//    opt[String]('h', "host")
-//      .valueName("<host>")
-//      .action((x, c) => c.copy(host = x)),
-//    opt[Int]('p', "port")
-//      .valueName("<port>")
-//      .action((x, c) => c.copy(port = x)),
-//    opt[String]('u', "userId")
-//      .action((userId, c) => c.copy(userId = Some(userId))),
-//    cmd("register")
-//      .action((x, c) => c.copy(command = Register())),
 
-  OParser.parse(parser, args, Config()) match {
-    case Some(config) =>
-      config.file.foreach { file =>
-        Using(Source.fromFile(file, "UTF-8"))(_.mkString).foreach { jsonLd =>
-          // TODO
-//          val out = VC.fromJsonLd(jsonLd)
-//          out.rdfModel.write(System.out, "JSON-LD")
+  OParser.parse(parser, args, Config()).foreach { config: Config =>
+    config.file.foreach { file =>
+      Using(Source.fromFile(file, "UTF-8"))(_.mkString).foreach { jsonLd =>
+        VC.fromJsonLd(jsonLd) match {
+          case Left(err) =>
+            System.err.println(s"Got an error: $err")
+          case Right(vc) =>
+            val out: Json = JsonCodec.vcJsonEncoder(vc)
+            print(out.printWith(Printer.spaces2))
         }
       }
-    case _ =>
-    // arguments are bad, error message will have been displayed
+    }
   }
 
   sealed trait Command

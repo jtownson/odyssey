@@ -1,26 +1,41 @@
 package net.jtownson.odyssey
 
 import java.net.{URI, URL}
-import java.time.LocalDateTime
+import java.time.{LocalDateTime, ZoneId}
 import java.time.format.DateTimeFormatter
+import java.time.temporal.TemporalAccessor
 
 import io.circe.Json.obj
 import io.circe.syntax._
 import io.circe._
+import io.circe.parser.decode
 import net.jtownson.odyssey.VC.ParsedVc
+import net.jtownson.odyssey.VerificationError.ParseError
 
 /**
- * Circe encoder/decoder to write verifiable credential data model.
- */
-object VcJsonCodec {
+  * Circe encoder/decoder to write verifiable credential data model.
+  */
+object JsonCodec {
 
-  implicit val urlEncoder: Encoder[URL] = Encoder[String].contramap(_.toString)
-  implicit val urlDecoder: Decoder[URL] = Decoder[String].map(new URL(_))
+  private implicit val urlEncoder: Encoder[URL] = Encoder[String].contramap(_.toString)
+  private implicit val urlDecoder: Decoder[URL] = Decoder[String].map(new URL(_))
 
-  implicit val uriEncoder: Encoder[URI] = Encoder[String].contramap(_.toString)
-  implicit val uriDecoder: Decoder[URI] = Decoder[String].map(new URI(_))
+  private implicit val uriEncoder: Encoder[URI] = Encoder[String].contramap(_.toString)
+  private implicit val uriDecoder: Decoder[URI] = Decoder[String].map(new URI(_))
 
-  val df = DateTimeFormatter.ISO_DATE_TIME
+  private implicit val localDateTimeEncoder: Encoder[LocalDateTime] = Encoder[String].contramap(d => dfRfc3339.format(d))
+  private implicit val localDateTimeDecoder: Decoder[LocalDateTime] = Decoder[String].map(dateStr => LocalDateTime.from(dfRfc3339.parse(dateStr)))
+
+  private val dfRfc3339 = DateTimeFormatter
+    .ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'")
+    .withZone(ZoneId.of("UTC"))
+
+  def decodeJsonLd(jsonLdSer: String): Either[VerificationError, VC] = {
+    decode(jsonLdSer)(vcJsonDecoder).left.map { err =>
+      println(err)
+      ParseError
+    }
+  }
 
   def vcJsonEncoder: Encoder[VC] = {
     Encoder.instance { vc: VC =>
@@ -29,8 +44,8 @@ object VcJsonCodec {
         "id" -> vc.id.map(_.asJson).getOrElse(Json.Null),
         "type" -> strOrArr(vc.types),
         "issuer" -> vc.issuer.asJson,
-        "issuanceDate" -> vc.issuanceDate.map(ldt => df.format(ldt).asJson).getOrElse(Json.Null),
-        "expirationDate" -> vc.expirationDate.map(ldt => df.format(ldt).asJson).getOrElse(Json.Null),
+        "issuanceDate" -> vc.issuanceDate.map(ldt => ldt.asJson).getOrElse(Json.Null),
+        "expirationDate" -> vc.expirationDate.map(ldt => ldt.asJson).getOrElse(Json.Null),
         "credentialSubject" -> strOrArr(vc.claims)
       ).dropNullValues
     }
@@ -53,7 +68,6 @@ object VcJsonCodec {
         credentialSubject <- hc.downField("credentialSubject").as[Json]
       } yield {
         val subject: Seq[JsonObject] = foldCredentialSubject(credentialSubject)
-
         ParsedVc(id, issuer, issuanceDate, expirationDate, types, contexts, subject)
       }
     }

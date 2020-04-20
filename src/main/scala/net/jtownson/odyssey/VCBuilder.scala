@@ -21,7 +21,7 @@ case class VCBuilder[F <: LinkedDatasetField] private[odyssey] (
     publicKeyRef: Option[URL] = None,
     signatureAlgo: Option[String] = None,
     issuanceDate: Option[LocalDateTime] = None,
-    expirationDate: Option[LocalDateTime] = None,
+    expirationDate: Option[LocalDateTime] = None
 ) {
   def withId(id: String): VCBuilder[F] = {
     copy(id = Some(id))
