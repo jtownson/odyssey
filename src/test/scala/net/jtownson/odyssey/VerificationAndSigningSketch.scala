@@ -1,7 +1,7 @@
 package net.jtownson.odyssey
 
 import java.net.{URI, URL}
-import java.security.PrivateKey
+import java.security.{PrivateKey, PublicKey}
 import java.time.LocalDate
 
 import io.circe.Printer
@@ -38,6 +38,8 @@ class VerificationAndSigningSketch extends FlatSpec {
   println(jws)
 
   // ... somewhere else, another app, another part of the system, we obtain the jws...
+  // whitelist algos: EC, ???
+  // key resolution
   val parseE: Either[VerificationError, VC] = VC.fromJws(jws)
 
   parseE match {

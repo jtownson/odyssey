@@ -8,6 +8,7 @@ import io.circe.Json.obj
 import io.circe._
 import io.circe.parser.decode
 import io.circe.syntax._
+import net.jtownson.odyssey.JsonCodec.JsonValidation.validatedContexts
 import net.jtownson.odyssey.VerificationError.ParseError
 
 /**
@@ -15,15 +16,15 @@ import net.jtownson.odyssey.VerificationError.ParseError
   */
 object JsonCodec {
 
-  private implicit val urlEncoder: Encoder[URL] = Encoder[String].contramap(_.toString)
-  private implicit val urlDecoder: Decoder[URL] = Decoder[String].map(new URL(_))
+  implicit val urlEncoder: Encoder[URL] = Encoder[String].contramap(_.toString)
+  implicit val urlDecoder: Decoder[URL] = Decoder[String].map(new URL(_))
 
-  private implicit val uriEncoder: Encoder[URI] = Encoder[String].contramap(_.toString)
-  private implicit val uriDecoder: Decoder[URI] = Decoder[String].map(new URI(_))
+  implicit val uriEncoder: Encoder[URI] = Encoder[String].contramap(_.toString)
+  implicit val uriDecoder: Decoder[URI] = Decoder[String].map(new URI(_))
 
-  private implicit val localDateTimeEncoder: Encoder[LocalDateTime] =
+  implicit val localDateTimeEncoder: Encoder[LocalDateTime] =
     Encoder[String].contramap(d => dfRfc3339.format(d))
-  private implicit val localDateTimeDecoder: Decoder[LocalDateTime] =
+  implicit val localDateTimeDecoder: Decoder[LocalDateTime] =
     Decoder[String].map(dateStr => LocalDateTime.from(dfRfc3339.parse(dateStr)))
 
   private val dfRfc3339 = DateTimeFormatter
@@ -61,7 +62,7 @@ object JsonCodec {
       for {
         id <- hc.downField("id").as[Option[String]]
         types <- hc.downField("type").as[Seq[String]]
-        contexts <- hc.downField("@context").as[Seq[URI]]
+        contexts <- validatedContexts(hc.downField("@context"))
         issuer <- hc.downField("issuer").as[URI]
         issuanceDate <- hc.downField("issuanceDate").as[Option[LocalDateTime]]
         expirationDate <- hc.downField("expirationDate").as[Option[LocalDateTime]]
@@ -70,6 +71,12 @@ object JsonCodec {
         val subject: Seq[JsonObject] = foldCredentialSubject(credentialSubject)
         VC(id, issuer, issuanceDate, expirationDate, types, contexts, subject)
       }
+    }
+  }
+
+  object JsonValidation {
+    def validatedContexts(context: ACursor): Decoder.Result[Seq[URI]] = {
+      context.as[Seq[URI]]
     }
   }
 

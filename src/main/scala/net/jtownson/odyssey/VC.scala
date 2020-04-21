@@ -31,4 +31,16 @@ object VC {
   def apply(): VCBuilder[EmptyField] = VCBuilder()
   def fromJws(jwsSer: String): Either[VerificationError, VC] = JwsCodec.decodeJws(jwsSer)
   def fromJsonLd(jsonLdSer: String): Either[VerificationError, VC] = JsonCodec.decodeJsonLd(jsonLdSer)
+
+  def apply(
+      id: Option[String],
+      issuer: URI,
+      issuanceDate: Option[LocalDateTime],
+      expirationDate: Option[LocalDateTime],
+      types: Seq[String],
+      contexts: Seq[URI],
+      claims: Seq[JsonObject]
+  ): VC = {
+    new VC(id, issuer, issuanceDate, expirationDate, types, contexts, claims)
+  }
 }
