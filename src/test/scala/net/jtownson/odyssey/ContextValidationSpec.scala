@@ -4,11 +4,11 @@ import java.net.URI
 
 import io.circe.syntax._
 import io.circe.{DecodingFailure, Json}
-import net.jtownson.odyssey.JsonCodec.JsonValidation.contextDecoder
+import net.jtownson.odyssey.ContextValidation.contextDecoder
 import org.scalatest.FlatSpec
 import org.scalatest.Matchers._
 
-class JsonCodecSpec extends FlatSpec {
+class ContextValidationSpec extends FlatSpec {
 
   "JsonValidation" should "error for an illegal context URI" in {
     val context = Json.arr("uri:a".asJson)
