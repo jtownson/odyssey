@@ -2,34 +2,46 @@ package net.jtownson.odyssey
 
 import java.net.URL
 import java.security.{PrivateKey, PublicKey}
-import java.time.{LocalDateTime, ZoneOffset}
+import java.time.ZoneOffset
 
 import io.circe
+import io.circe.syntax._
 import io.circe.{Json, Printer, parser}
-import io.circe.parser.decode
 import net.jtownson.odyssey.VerificationError.{InvalidSignature, ParseError}
 import org.jose4j.jwa.AlgorithmConstraints
 import org.jose4j.jwa.AlgorithmConstraints.ConstraintType
-import org.jose4j.jws.{AlgorithmIdentifiers, JsonWebSignature}
-import io.circe.syntax._
+import org.jose4j.jws.JsonWebSignature
+
+import scala.concurrent.{ExecutionContext, Future}
 
 // Encode and decode verifiable credentials as application/vc+json+jwt
 object JwsCodec {
 
   def encodeJws(privateKey: PrivateKey, publicKeyRef: URL, signatureAlgo: String, vc: VC): String = {
     val jws: JsonWebSignature = new JsonWebSignature()
-//    jws.setAlgorithmHeaderValue(signatureAlgo)
     jws.setKey(privateKey)
-    jws.getHeaders.setFullHeaderAsJsonString(header(publicKeyRef, signatureAlgo, vc))
-//    jws.setKeyIdHeaderValue(publicKeyRef.toString)
-//    jws.setContentTypeHeaderValue("application/vc+json")
-//    jws.setHeader("iss", vc.issuer.toString)
-//    vc.issuanceDate.foreach(iss => jws.setHeader("nbf", iss.toEpochSecond(ZoneOffset.UTC)))
-//    vc.expirationDate.foreach(exp => jws.setHeader("exp", exp.toEpochSecond(ZoneOffset.UTC)))
+    jws.getHeaders.setFullHeaderAsJsonString(headers(publicKeyRef, signatureAlgo, vc))
     jws.getCompactSerialization
   }
 
-  private def header(publicKeyRef: URL, signatureAlgo: String, vc: VC): String = {
+  def decodeJws(algoWhitelist: Seq[String], publicKeyResolver: PublicKeyResolver, jwsSer: String)(
+      implicit ec: ExecutionContext
+  ): Future[VC] = {
+    val jws = new JsonWebSignature()
+    jws.setCompactSerialization(jwsSer)
+    jws.setAlgorithmConstraints(new AlgorithmConstraints(ConstraintType.WHITELIST, algoWhitelist: _*))
+    val publicKeyRef = new URL(jws.getHeader("kid"))
+
+    for {
+      publicKey <- publicKeyResolver.resolvePublicKey(publicKeyRef)
+      _ <- verifySignature(jws, publicKey)
+      vc <- toFuture(parseVc(jws))
+    } yield {
+      vc
+    }
+  }
+
+  private def headers(publicKeyRef: URL, signatureAlgo: String, vc: VC): String = {
     import JsonCodec._
     Json
       .obj(
@@ -45,31 +57,24 @@ object JwsCodec {
       .printWith(Printer.spaces2)
   }
 
-  // TODO parametrize public key resolvers and whitelisted signature algos.
-  private def resolveVerificationKey(keyIdHeader: String): PublicKey = {
-    KeyFoo.getPublicKeyFromRef(new URL(keyIdHeader))
+  private def verifySignature(jws: JsonWebSignature, publicKey: PublicKey): Future[Unit] = {
+    jws.setKey(publicKey)
+    if (jws.verifySignature())
+      Future.unit
+    else
+      Future.failed(InvalidSignature())
   }
 
-  def decodeJws(jwsSer: String): Either[VerificationError, VC] = {
-
-    val jws = new JsonWebSignature()
-    jws.setCompactSerialization(jwsSer)
-    jws.setAlgorithmConstraints(
-      new AlgorithmConstraints(ConstraintType.WHITELIST, AlgorithmIdentifiers.ECDSA_USING_P256_CURVE_AND_SHA256)
-    )
-    jws.setKey(resolveVerificationKey(jws.getHeader("kid")))
-
-    if (jws.verifySignature()) {
-      val parseResult: Either[circe.Error, VC] = for {
-        headerJson <- parser.parse(jws.getHeaders.getFullHeaderAsJsonString)
-        hc = headerJson.hcursor
-        vcJson <- hc.downField("vc").as[Json]
-        vc <- JsonCodec.vcJsonDecoder(vcJson.hcursor)
-      } yield vc
-      parseResult.left.map(circeError => ParseError)
-    } else {
-      Left(InvalidSignature)
-    }
+  private def toFuture(e: Either[circe.Error, VC]): Future[VC] = {
+    e.left.map(circeError => ParseError()).fold(Future.failed, Future.successful)
   }
 
+  private def parseVc(jws: JsonWebSignature): Either[circe.Error, VC] = {
+    for {
+      headerJson <- parser.parse(jws.getHeaders.getFullHeaderAsJsonString)
+      hc = headerJson.hcursor
+      vcJson <- hc.downField("vc").as[Json]
+      vc <- JsonCodec.vcJsonDecoder(vcJson.hcursor)
+    } yield vc
+  }
 }

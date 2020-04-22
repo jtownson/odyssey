@@ -1,11 +1,19 @@
 package net.jtownson.odyssey
 
-import java.net.{URI, URL}
-import java.security.{PrivateKey, PublicKey}
+import java.net.URL
+import java.security.PrivateKey
 import java.time.LocalDate
 
 import io.circe.Printer
+import net.jtownson.odyssey.VerificationAndSigningSketch.{dummyKeyResolver, whitelistedAlgos}
+import org.jose4j.jws.AlgorithmIdentifiers.ECDSA_USING_P256_CURVE_AND_SHA256
 import org.scalatest.FlatSpec
+import org.scalatest.concurrent.ScalaFutures._
+
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.duration.Duration
+import scala.concurrent.{Await, Future}
+import scala.util.{Failure, Success}
 
 class VerificationAndSigningSketch extends FlatSpec {
 
@@ -38,20 +46,15 @@ class VerificationAndSigningSketch extends FlatSpec {
   println(jws)
 
   // ... somewhere else, another app, another part of the system, we obtain the jws...
-  // whitelist algos: EC, ???
-  // key resolution
-  val parseE: Either[VerificationError, VC] = VC.fromJws(jws)
+  val parseResult: VC = VC.fromJws(whitelistedAlgos, dummyKeyResolver, jws).futureValue
 
-  parseE match {
-    case Right(vc) =>
-      // great, we have our data back
-      println(s"Received dataset has valid signature and decodes to the following dataset:")
-      println(JsonCodec.vcJsonEncoder(vc).printWith(Printer.spaces2))
-    case Left(error) =>
-      // oh dear, there must have been either:
-      // a (network) problem resolving the verification public key
-      // an invalid JSON object
-      // an invalid signature
-      println(s"Error: $error")
+  println(s"Received dataset has a valid signature and decodes to the following dataset:")
+  println(JsonCodec.vcJsonEncoder(parseResult).printWith(Printer.spaces2))
+}
+
+object VerificationAndSigningSketch {
+  val dummyKeyResolver: PublicKeyResolver = { (publicKeyRef: URL) =>
+    Future.successful(KeyFoo.getPublicKeyFromRef(publicKeyRef))
   }
+  val whitelistedAlgos = Seq(ECDSA_USING_P256_CURVE_AND_SHA256)
 }

@@ -34,7 +34,7 @@ object JsonCodec {
   def decodeJsonLd(jsonLdSer: String): Either[VerificationError, VC] = {
     decode(jsonLdSer)(vcJsonDecoder).left.map { err =>
       println(err)
-      ParseError
+      ParseError()
     }
   }
 

@@ -8,13 +8,12 @@ object Dependencies {
   lazy val circe = Seq(
     "io.circe" %% "circe-core" % circeVersion,
     "io.circe" %% "circe-generic" % circeVersion,
-    "io.circe" %% "circe-parser" % circeVersion,
-    "io.circe" %% "circe-literal" % circeVersion % Test
+    "io.circe" %% "circe-parser" % circeVersion
   )
 
   lazy val `bouncy-castle` = Seq(
-    "org.bouncycastle" % "bcprov-jdk15on" % "1.62",
-    "org.bouncycastle" % "bcpkix-jdk15on" % "1.62"
+    "org.bouncycastle" % "bcprov-jdk15on" % "1.62" % Test,
+    "org.bouncycastle" % "bcpkix-jdk15on" % "1.62" % Test
   )
 
   lazy val jose = Seq(
@@ -28,5 +27,4 @@ object Dependencies {
   lazy val `slf4j-nop` = Seq(
     "org.slf4j" % "slf4j-nop" % "1.7.26"
   )
-
 }

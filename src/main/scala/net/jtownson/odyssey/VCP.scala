@@ -11,8 +11,6 @@ import scala.util.Using
   * Embryonic app to enable running the verifiable credentials test suite.
   */
 object VCP extends App {
-//  import ch.qos.logback.classic.util.ContextInitializer
-//  System.setProperty(ContextInitializer.CONFIG_FILE_PROPERTY, "/logback.xml")
 
   val builder = OParser.builder[Config]
   import builder._

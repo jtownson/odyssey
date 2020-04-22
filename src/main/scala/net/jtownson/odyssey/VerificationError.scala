@@ -1,8 +1,9 @@
 package net.jtownson.odyssey
 
-trait VerificationError
+sealed trait VerificationError extends Exception
 
 object VerificationError {
-  case object InvalidSignature extends VerificationError
-  case object ParseError extends VerificationError
+  case class InvalidSignature() extends VerificationError
+  case class ParseError() extends VerificationError
+  case class PublicKeyResolutionError() extends VerificationError
 }

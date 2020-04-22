@@ -6,6 +6,8 @@ import java.time.LocalDateTime
 import io.circe.JsonObject
 import net.jtownson.odyssey.VCBuilder.LinkedDatasetField.EmptyField
 
+import scala.concurrent.{ExecutionContext, Future}
+
 case class VC(
     id: Option[String],
     issuer: URI,
@@ -29,8 +31,14 @@ case class VC(
   */
 object VC {
   def apply(): VCBuilder[EmptyField] = VCBuilder()
-  def fromJws(jwsSer: String): Either[VerificationError, VC] = JwsCodec.decodeJws(jwsSer)
-  def fromJsonLd(jsonLdSer: String): Either[VerificationError, VC] = JsonCodec.decodeJsonLd(jsonLdSer)
+
+  def fromJws(algoWhitelist: Seq[String], publicKeyResolver: PublicKeyResolver, jwsSer: String)(
+      implicit ec: ExecutionContext
+  ): Future[VC] =
+    JwsCodec.decodeJws(algoWhitelist, publicKeyResolver, jwsSer)
+
+  def fromJsonLd(jsonLdSer: String): Either[VerificationError, VC] =
+    JsonCodec.decodeJsonLd(jsonLdSer)
 
   def apply(
       id: Option[String],
