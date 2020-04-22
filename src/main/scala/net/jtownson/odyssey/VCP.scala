@@ -27,8 +27,7 @@ object VCP extends App {
           case Left(err) =>
             System.err.println(s"Got an error: $err")
           case Right(vc) =>
-            val out: Json = JsonCodec.vcJsonEncoder(vc)
-            print(out.printWith(Printer.spaces2))
+            print(jsonLd)
         }
       }
     }
