@@ -49,7 +49,7 @@ object JwsCodec {
         "kid" -> publicKeyRef.asJson,
         "alg" -> signatureAlgo.asJson,
         "iss" -> vc.issuer.asJson,
-        "nbf" -> vc.issuanceDate.map(iss => iss.toEpochSecond(ZoneOffset.UTC).asJson).getOrElse(Json.Null),
+        "nbf" -> vc.issuanceDate.toEpochSecond(ZoneOffset.UTC).asJson,
         "exp" -> vc.expirationDate.map(exp => exp.toEpochSecond(ZoneOffset.UTC).asJson).getOrElse(Json.Null),
         "vc" -> vcJsonEncoder(vc)
       )
@@ -66,7 +66,7 @@ object JwsCodec {
   }
 
   private def toFuture(e: Either[circe.Error, VC]): Future[VC] = {
-    e.left.map(circeError => ParseError()).fold(Future.failed, Future.successful)
+    e.left.map(circeError => ParseError(circeError.getMessage)).fold(Future.failed, Future.successful)
   }
 
   private def parseVc(jws: JsonWebSignature): Either[circe.Error, VC] = {

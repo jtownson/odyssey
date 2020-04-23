@@ -7,12 +7,35 @@ import io.circe.{Decoder, DecodingFailure, HCursor, Json}
 object TypeValidation {
   def typeDecoder: Decoder[Seq[String]] = (hc: HCursor) => {
     hc.value.fold(
-      jsonNull = Left(DecodingFailure("null is not a valid type definition", hc.history)),
-      jsonBoolean = _ => Left(DecodingFailure("boolean is not a valid type definition", hc.history)),
-      jsonNumber = _ => Left(DecodingFailure("number is not a valid type definition", hc.history)),
-      jsonString = s => decodeTypeAsString(s),
+      jsonNull = Left(
+        DecodingFailure(
+          "A JSON null is not a valid type definition. Require an array [\"VerifiableCredential\", ...].",
+          hc.history
+        )
+      ),
+      jsonBoolean = _ =>
+        Left(
+          DecodingFailure(
+            "A JSON boolean is not a valid type definition. Require an array [\"VerifiableCredential\", ...].",
+            hc.history
+          )
+        ),
+      jsonNumber = _ =>
+        Left(
+          DecodingFailure(
+            "A JSON number is not a valid type definition. Require an array [\"VerifiableCredential\", ...].",
+            hc.history
+          )
+        ),
+      jsonString = _ =>
+        Left(
+          DecodingFailure(
+            "A JSON string is not a valid type definition. Require an array [\"VerifiableCredential\", ...].",
+            hc.history
+          )
+        ),
       jsonArray = (s: Seq[Json]) => decodeTypeAsArray(s),
-      jsonObject = obj => Left(DecodingFailure("object is not a valid type definition", hc.history))
+      jsonObject = _ => Left(DecodingFailure("object is not a valid type definition", hc.history))
     )
   }
 

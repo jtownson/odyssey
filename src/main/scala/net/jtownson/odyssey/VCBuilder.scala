@@ -5,12 +5,12 @@ import java.security.PrivateKey
 import java.time.LocalDateTime
 
 import io.circe.{Json, JsonObject}
-import net.jtownson.odyssey.VCBuilder.LinkedDatasetField
-import net.jtownson.odyssey.VCBuilder.LinkedDatasetField._
+import net.jtownson.odyssey.VCBuilder.MandatoryField
+import net.jtownson.odyssey.VCBuilder.MandatoryField._
 import net.jtownson.odyssey.syntax._
 import org.jose4j.jws.AlgorithmIdentifiers
 
-case class VCBuilder[F <: LinkedDatasetField] private[odyssey] (
+case class VCBuilder[F <: MandatoryField] private[odyssey] (
     types: Seq[String] = Seq("VerifiableCredential"),
     contexts: Seq[URI] = Seq("https://www.w3.org/2018/credentials/v1"),
     id: Option[String] = None,
@@ -62,7 +62,7 @@ case class VCBuilder[F <: LinkedDatasetField] private[odyssey] (
   }
 
   def toJws: String = {
-    val vc = VC(id, issuer.get, issuanceDate, expirationDate, types, contexts, subjects)
+    val vc = VC(id, issuer.get, issuanceDate.get, expirationDate, types, contexts, subjects)
     JwsCodec.encodeJws(privateKey.get, publicKeyRef.get, signatureAlgo.get, vc)
   }
 }
@@ -71,14 +71,19 @@ object VCBuilder {
 
   def apply(): VCBuilder[EmptyField] = VCBuilder[EmptyField]()
 
-  sealed trait LinkedDatasetField
+  sealed trait MandatoryField
 
-  object LinkedDatasetField {
-    sealed trait EmptyField extends LinkedDatasetField
-    sealed trait CredentialSubjectField extends LinkedDatasetField
-    sealed trait SignatureField extends LinkedDatasetField
-    sealed trait IssuerField extends LinkedDatasetField
+  object MandatoryField {
+    sealed trait EmptyField extends MandatoryField
+    sealed trait CredentialSubjectField extends MandatoryField
+    sealed trait SignatureField extends MandatoryField
+    sealed trait IssuerField extends MandatoryField
+    sealed trait IssuanceDateField extends MandatoryField
 
-    type MandatoryFields = EmptyField with IssuerField with CredentialSubjectField with SignatureField
+    type MandatoryFields = EmptyField
+      with IssuerField
+      with IssuanceDateField
+      with CredentialSubjectField
+      with SignatureField
   }
 }

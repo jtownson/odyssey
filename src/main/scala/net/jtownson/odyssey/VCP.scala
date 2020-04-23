@@ -25,8 +25,8 @@ object VCP extends App {
       Using(Source.fromFile(file, "UTF-8"))(_.mkString).foreach { jsonLd =>
         VC.fromJsonLd(jsonLd) match {
           case Left(err) =>
-            System.err.println(s"Got an error: $err")
-          case Right(vc) =>
+            System.err.println(s"Got an error: ${err.getMessage}")
+          case Right(_) =>
             print(jsonLd)
         }
       }

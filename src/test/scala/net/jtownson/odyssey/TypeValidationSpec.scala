@@ -11,7 +11,7 @@ class TypeValidationSpec extends FlatSpec {
     val tpe = "Foo".asJson
     tpe.as[Seq[String]](TypeValidation.typeDecoder) shouldBe Left(
       DecodingFailure(
-        "A type def when a single element array, must be [\"VerifiableCredential\"]",
+        "A JSON string is not a valid type definition. Require an array [\"VerifiableCredential\", ...].",
         List()
       )
     )

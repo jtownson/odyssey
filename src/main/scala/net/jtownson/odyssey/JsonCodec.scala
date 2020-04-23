@@ -28,15 +28,15 @@ object JsonCodec {
   implicit val localDateTimeDecoder: Decoder[LocalDateTime] =
     Decoder[String].map(dateStr => LocalDateTime.from(dfRfc3339.parse(dateStr)))
 
+  val absoluteUriDecoder: Decoder[URI] =
+    uriDecoder.ensure(uri => uri.isAbsolute, "Require an absolute URI at this position.")
+
   private val dfRfc3339 = DateTimeFormatter
     .ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'")
     .withZone(ZoneId.of("UTC"))
 
   def decodeJsonLd(jsonLdSer: String): Either[VerificationError, VC] = {
-    decode(jsonLdSer)(vcJsonDecoder).left.map { err =>
-      println(err)
-      ParseError()
-    }
+    decode(jsonLdSer)(vcJsonDecoder).left.map(err => ParseError(err.getMessage))
   }
 
   def vcJsonEncoder: Encoder[VC] = {
@@ -46,7 +46,7 @@ object JsonCodec {
         "id" -> vc.id.map(_.asJson).getOrElse(Json.Null),
         "type" -> strOrArr(vc.types),
         "issuer" -> vc.issuer.asJson,
-        "issuanceDate" -> vc.issuanceDate.map(ldt => ldt.asJson).getOrElse(Json.Null),
+        "issuanceDate" -> vc.issuanceDate.asJson,
         "expirationDate" -> vc.expirationDate.map(ldt => ldt.asJson).getOrElse(Json.Null),
         "credentialSubject" -> strOrArr(vc.claims)
       ).dropNullValues
@@ -63,8 +63,8 @@ object JsonCodec {
         id <- hc.downField("id").as[Option[String]]
         types <- hc.downField("type").as[Seq[String]](typeDecoder)
         contexts <- hc.downField("@context").as[Seq[URI]](contextDecoder)
-        issuer <- hc.downField("issuer").as[URI]
-        issuanceDate <- hc.downField("issuanceDate").as[Option[LocalDateTime]]
+        issuer <- hc.downField("issuer").as[URI](absoluteUriDecoder)
+        issuanceDate <- hc.downField("issuanceDate").as[LocalDateTime]
         expirationDate <- hc.downField("expirationDate").as[Option[LocalDateTime]]
         credentialSubject <- hc.downField("credentialSubject").as[Json]
       } yield {

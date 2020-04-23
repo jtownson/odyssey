@@ -4,14 +4,14 @@ import java.net.URI
 import java.time.LocalDateTime
 
 import io.circe.JsonObject
-import net.jtownson.odyssey.VCBuilder.LinkedDatasetField.EmptyField
+import net.jtownson.odyssey.VCBuilder.MandatoryField.EmptyField
 
 import scala.concurrent.{ExecutionContext, Future}
 
 case class VC(
     id: Option[String],
     issuer: URI,
-    issuanceDate: Option[LocalDateTime],
+    issuanceDate: LocalDateTime,
     expirationDate: Option[LocalDateTime],
     types: Seq[String],
     contexts: Seq[URI],
@@ -43,7 +43,7 @@ object VC {
   def apply(
       id: Option[String],
       issuer: URI,
-      issuanceDate: Option[LocalDateTime],
+      issuanceDate: LocalDateTime,
       expirationDate: Option[LocalDateTime],
       types: Seq[String],
       contexts: Seq[URI],
