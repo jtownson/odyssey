@@ -49,7 +49,7 @@ class VerificationAndSigningSketch extends FlatSpec {
   val parseResult: VC = VC.fromJws(whitelistedAlgos, dummyKeyResolver, jws).futureValue
 
   println(s"Received dataset has a valid signature and decodes to the following dataset:")
-  println(JsonCodec.vcJsonEncoder(parseResult).printWith(Printer.spaces2))
+  println(VCJsonCodec.vcJsonEncoder(parseResult).printWith(Printer.spaces2))
 }
 
 object VerificationAndSigningSketch {

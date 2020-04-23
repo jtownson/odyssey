@@ -38,17 +38,5 @@ object VC {
     JwsCodec.decodeJws(algoWhitelist, publicKeyResolver, jwsSer)
 
   def fromJsonLd(jsonLdSer: String): Either[VerificationError, VC] =
-    JsonCodec.decodeJsonLd(jsonLdSer)
-
-  def apply(
-      id: Option[String],
-      issuer: URI,
-      issuanceDate: LocalDateTime,
-      expirationDate: Option[LocalDateTime],
-      types: Seq[String],
-      contexts: Seq[URI],
-      claims: Seq[JsonObject]
-  ): VC = {
-    new VC(id, issuer, issuanceDate, expirationDate, types, contexts, claims)
-  }
+    VCJsonCodec.decodeJsonLd(jsonLdSer)
 }

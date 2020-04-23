@@ -15,25 +15,9 @@ import net.jtownson.odyssey.VerificationError.ParseError
 /**
   * Circe encoder/decoder to write verifiable credential data model.
   */
-object JsonCodec {
+object VCJsonCodec {
 
-  implicit val urlEncoder: Encoder[URL] = Encoder[String].contramap(_.toString)
-  implicit val urlDecoder: Decoder[URL] = Decoder[String].map(new URL(_))
-
-  implicit val uriEncoder: Encoder[URI] = Encoder[String].contramap(_.toString)
-  implicit val uriDecoder: Decoder[URI] = Decoder[String].map(new URI(_))
-
-  implicit val localDateTimeEncoder: Encoder[LocalDateTime] =
-    Encoder[String].contramap(d => dfRfc3339.format(d))
-  implicit val localDateTimeDecoder: Decoder[LocalDateTime] =
-    Decoder[String].map(dateStr => LocalDateTime.from(dfRfc3339.parse(dateStr)))
-
-  val absoluteUriDecoder: Decoder[URI] =
-    uriDecoder.ensure(uri => uri.isAbsolute, "Require an absolute URI at this position.")
-
-  private val dfRfc3339 = DateTimeFormatter
-    .ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'")
-    .withZone(ZoneId.of("UTC"))
+  import CodecStuff._
 
   def decodeJsonLd(jsonLdSer: String): Either[VerificationError, VC] = {
     decode(jsonLdSer)(vcJsonDecoder).left.map(err => ParseError(err.getMessage))
@@ -53,15 +37,11 @@ object JsonCodec {
     }
   }
 
-  private def strOrArr[T: Encoder](v: Seq[T]): Json = {
-    if (v.length == 1) v.head.asJson else v.asJson
-  }
-
   def vcJsonDecoder: Decoder[VC] = {
     Decoder.instance { hc: HCursor =>
       for {
         id <- hc.downField("id").as[Option[String]]
-        types <- hc.downField("type").as[Seq[String]](typeDecoder)
+        types <- hc.downField("type").as[Seq[String]](typeDecoder("VerifiableCredential"))
         contexts <- hc.downField("@context").as[Seq[URI]](contextDecoder)
         issuer <- hc.downField("issuer").as[URI](absoluteUriDecoder)
         issuanceDate <- hc.downField("issuanceDate").as[LocalDateTime]
@@ -72,6 +52,10 @@ object JsonCodec {
         VC(id, issuer, issuanceDate, expirationDate, types, contexts, subject)
       }
     }
+  }
+
+  private def strOrArr[T: Encoder](v: Seq[T]): Json = {
+    if (v.length == 1) v.head.asJson else v.asJson
   }
 
   private def foldCredentialSubject(json: Json): Seq[JsonObject] = {

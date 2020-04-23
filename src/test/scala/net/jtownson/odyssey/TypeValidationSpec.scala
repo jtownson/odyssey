@@ -9,9 +9,9 @@ class TypeValidationSpec extends FlatSpec {
 
   "TypeValidation" should "error for a single invalid string" in {
     val tpe = "Foo".asJson
-    tpe.as[Seq[String]](TypeValidation.typeDecoder) shouldBe Left(
+    tpe.as[Seq[String]](TypeValidation.typeDecoder("VerifiableCredential")) shouldBe Left(
       DecodingFailure(
-        "A JSON string is not a valid type definition. Require an array [\"VerifiableCredential\", ...].",
+        "A JSON string is not a valid type definition. Require an array [VerifiableCredential, ...].",
         List()
       )
     )

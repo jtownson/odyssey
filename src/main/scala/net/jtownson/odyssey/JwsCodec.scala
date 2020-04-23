@@ -16,7 +16,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 // Encode and decode verifiable credentials as application/vc+json+jwt
 object JwsCodec {
-
+  import CodecStuff._
   def encodeJws(privateKey: PrivateKey, publicKeyRef: URL, signatureAlgo: String, vc: VC): String = {
     val jws: JsonWebSignature = new JsonWebSignature()
     jws.setKey(privateKey)
@@ -42,7 +42,7 @@ object JwsCodec {
   }
 
   private def headers(publicKeyRef: URL, signatureAlgo: String, vc: VC): String = {
-    import JsonCodec._
+    import VCJsonCodec._
     Json
       .obj(
         "cty" -> "application/vc+json".asJson,
@@ -74,7 +74,7 @@ object JwsCodec {
       headerJson <- parser.parse(jws.getHeaders.getFullHeaderAsJsonString)
       hc = headerJson.hcursor
       vcJson <- hc.downField("vc").as[Json]
-      vc <- JsonCodec.vcJsonDecoder(vcJson.hcursor)
+      vc <- VCJsonCodec.vcJsonDecoder(vcJson.hcursor)
     } yield vc
   }
 }
