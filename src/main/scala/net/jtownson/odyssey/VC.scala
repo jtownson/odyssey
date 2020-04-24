@@ -15,7 +15,7 @@ case class VC(
     expirationDate: Option[LocalDateTime],
     types: Seq[String],
     contexts: Seq[URI],
-    claims: Seq[JsonObject]
+    subjects: Seq[JsonObject]
 )
 
 /**

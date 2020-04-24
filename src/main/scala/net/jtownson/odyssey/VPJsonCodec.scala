@@ -57,15 +57,4 @@ object VPJsonCodec {
   private def strOrArr[T: Encoder](v: Seq[T]): Json = {
     if (v.length == 1) v.head.asJson else v.asJson
   }
-
-  private def foldCredentialSubject(json: Json): Seq[JsonObject] = {
-    json.fold(
-      Seq.empty,
-      _ => Seq.empty,
-      _ => Seq.empty,
-      _ => Seq.empty,
-      arr => arr.flatMap(foldCredentialSubject),
-      jsonObject => Seq(jsonObject)
-    )
-  }
 }

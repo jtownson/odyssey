@@ -11,9 +11,7 @@ import org.scalatest.FlatSpec
 import org.scalatest.concurrent.ScalaFutures._
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.duration.Duration
-import scala.concurrent.{Await, Future}
-import scala.util.{Failure, Success}
+import scala.concurrent.Future
 
 class VerificationAndSigningSketch extends FlatSpec {
 

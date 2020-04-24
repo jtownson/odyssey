@@ -32,7 +32,7 @@ object VCJsonCodec {
         "issuer" -> vc.issuer.asJson,
         "issuanceDate" -> vc.issuanceDate.asJson,
         "expirationDate" -> vc.expirationDate.map(ldt => ldt.asJson).getOrElse(Json.Null),
-        "credentialSubject" -> strOrArr(vc.claims)
+        "credentialSubject" -> strOrArr(vc.subjects)
       ).dropNullValues
     }
   }
