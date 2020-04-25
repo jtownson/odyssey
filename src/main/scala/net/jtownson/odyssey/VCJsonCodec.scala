@@ -1,8 +1,7 @@
 package net.jtownson.odyssey
 
-import java.net.{URI, URL}
-import java.time.format.DateTimeFormatter
-import java.time.{LocalDateTime, ZoneId}
+import java.net.URI
+import java.time.LocalDateTime
 
 import io.circe.Json.obj
 import io.circe._
@@ -28,7 +27,7 @@ object VCJsonCodec {
       obj(
         "@context" -> strOrArr(vc.contexts),
         "id" -> vc.id.map(_.asJson).getOrElse(Json.Null),
-        "type" -> strOrArr(vc.types),
+        "type" -> strOrArr(vc.types), // TODO this is wrong. String not valid.
         "issuer" -> vc.issuer.asJson,
         "issuanceDate" -> vc.issuanceDate.asJson,
         "expirationDate" -> vc.expirationDate.map(ldt => ldt.asJson).getOrElse(Json.Null),

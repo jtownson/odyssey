@@ -22,7 +22,7 @@ object CodecStuff {
   val absoluteUriDecoder: Decoder[URI] =
     uriDecoder.ensure(uri => uri.isAbsolute, "Require an absolute URI at this position.")
 
-  val dfRfc3339 = DateTimeFormatter
+  private val dfRfc3339 = DateTimeFormatter
     .ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'")
     .withZone(ZoneId.of("UTC"))
 
