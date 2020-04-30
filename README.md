@@ -3,8 +3,18 @@
 Odyssey is an implementation of the W3C [verifiable credentials data model](https://www.w3.org/TR/vc-data-model/).
 It allows you to generate and parse/verify verifiable credentials.
 
-Implementation is currently at a very early stage. It will generate
-and verify credentials provided as JWTs and parse verifiable credentials JSON.
+The implementation is currently at an early stage and support is provided for the 'basic' w3c data model tests.
+More to come.
+
+The library will generate and verify credentials provided as JWTs but it does not processes embedded JSON-LD proofs (yet).
+Again, more to come.
+
+The w3c vc-test-suite is included as a submodule of this project. You can run the test suite against odyssey as follows:
+```shell script
+odyssey$ sbt assembly
+odyssey$ cd w3c/vc-test-suite
+vc-test-suite$ npm install && npm test 
+```
 
 ### Example usage
 ```scala
