@@ -8,10 +8,10 @@ ThisBuild / scmInfo := Some(
 )
 ThisBuild / developers := List(
   Developer(
-    id    = "jmt",
-    name  = "Jeremy Townson",
+    id = "jmt",
+    name = "Jeremy Townson",
     email = "jeremy.townson@gmail.com",
-    url   = url("http://github.com/jtownson")
+    url = url("http://github.com/jtownson")
   )
 )
 ThisBuild / licenses := List("GNU 3" -> new URL("https://www.gnu.org/licenses/gpl-3.0.en.html"))
@@ -21,7 +21,7 @@ ThisBuild / publishTo := sonatypePublishToBundle.value
 ThisBuild / publishMavenStyle := true
 
 ThisBuild / scalaVersion := "2.13.1"
-ThisBuild / version := "0.1.0-SNAPSHOT"
+ThisBuild / version := "0.1.0"
 ThisBuild / organization := "net.jtownson"
 ThisBuild / organizationName := "odyssey"
 ThisBuild / scalacOptions := Seq(
