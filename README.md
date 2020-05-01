@@ -9,9 +9,23 @@ More to come.
 The library will generate and verify credentials provided as JWTs but it does not processes embedded JSON-LD proofs (yet).
 Again, more to come.
 
-The w3c vc-test-suite is included as a submodule of this project. You can run the test suite against odyssey as follows:
+The w3c vc-test-suite is included as a submodule of this project.
+You can run the test suite against odyssey.
+Firstly, create a config.json file under w3c/vc-test-suite (as described in the readme there). Set the following two
+entries in that config:
+```json
+{
+   "generator": "../../vc.sh",
+   "presentationGenerator": "../../vp.sh",
+   // other config...
+}
+```
+Now build the odyssey jar file, which `vc.sh` will execute:
 ```shell script
 odyssey$ sbt assembly
+```
+Finally, cd to the test suite directory and run the tests
+```shell script
 odyssey$ cd w3c/vc-test-suite
 vc-test-suite$ npm install && npm test 
 ```

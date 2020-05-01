@@ -1,21 +1,31 @@
 import Dependencies._
 
-lazy val commonSettings = Seq(
-  scalacOptions := Seq(
-    /*"-Xlog-implicits",*/ "-Ypartial-unification",
-    "-unchecked",
-    "-deprecation",
-    "-feature",
-    "-language:implicitConversions"
+ThisBuild / scmInfo := Some(
+  ScmInfo(
+    url("https://github.com/jtownson/odyssey"),
+    "scm:git@github.com:jtownson/odyssey.git"
   )
 )
+ThisBuild / developers := List(
+  Developer(
+    id    = "jmt",
+    name  = "Jeremy Townson",
+    email = "jeremy.townson@gmail.com",
+    url   = url("http://github.com/jtownson")
+  )
+)
+ThisBuild / licenses := List("GNU 3" -> new URL("https://www.gnu.org/licenses/gpl-3.0.en.html"))
+ThisBuild / homepage := Some(url("https://github.com/jtownson/odyssey"))
+ThisBuild / pomIncludeRepository := { _ => false }
+ThisBuild / publishTo := sonatypePublishToBundle.value
+ThisBuild / publishMavenStyle := true
 
 ThisBuild / scalaVersion := "2.13.1"
 ThisBuild / version := "0.1.0-SNAPSHOT"
 ThisBuild / organization := "net.jtownson"
 ThisBuild / organizationName := "odyssey"
 ThisBuild / scalacOptions := Seq(
-  /*"-Xlog-implicits",*/ "-Xfatal-warnings",
+  "-Xfatal-warnings",
   "-unchecked",
   "-deprecation",
   "-feature",
@@ -40,5 +50,3 @@ lazy val root = (project in file("."))
         `slf4j-nop` ++
         scalaTest
   )
-
-// See https://www.scala-sbt.org/1.x/docs/Using-Sonatype.html for instructions on how to publish to Sonatype.
