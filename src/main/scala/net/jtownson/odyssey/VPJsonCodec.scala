@@ -31,8 +31,8 @@ object VPJsonCodec {
       obj(
         "@context" -> strOrArr(vp.contexts),
         "id" -> vp.id.map(_.asJson).getOrElse(Json.Null),
-        "type" -> strOrArr(vp.types),
-        "verifiableCredential" -> vp.verifiableCredential.asJson,
+        "type" -> vp.types.asJson,
+        "verifiableCredential" -> vp.verifiableCredentials.asJson,
         "holder" -> vp.holder.map(_.asJson).getOrElse(Json.Null),
         "proof" -> Seq.empty[String].asJson
       ).dropNullValues
@@ -49,7 +49,7 @@ object VPJsonCodec {
         holder <- hc.downField("holder").as[Option[URI]]
         _ <- hc.downField("proof").as[Json]
       } yield {
-        VP(contexts, id, types, vc, holder)
+        VP(additionalContexts = contexts, id = id, additionalTypes = types, vc, holder)
       }
     }
   }

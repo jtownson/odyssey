@@ -15,7 +15,7 @@ import org.jose4j.jws.JsonWebSignature
 import scala.concurrent.{ExecutionContext, Future}
 
 // Encode and decode verifiable credentials as application/vc+json+jwt
-object JwsCodec {
+object VCJwsCodec {
   import CodecStuff._
   def encodeJws(privateKey: PrivateKey, publicKeyRef: URL, signatureAlgo: String, vc: VC): String = {
     val jws: JsonWebSignature = new JsonWebSignature()
@@ -24,8 +24,8 @@ object JwsCodec {
     jws.getCompactSerialization
   }
 
-  def decodeJws(algoWhitelist: Seq[String], publicKeyResolver: PublicKeyResolver, jwsSer: String)(
-      implicit ec: ExecutionContext
+  def decodeJws(algoWhitelist: Seq[String], publicKeyResolver: PublicKeyResolver, jwsSer: String)(implicit
+      ec: ExecutionContext
   ): Future[VC] = {
     val jws = new JsonWebSignature()
     jws.setCompactSerialization(jwsSer)
@@ -46,6 +46,7 @@ object JwsCodec {
     Json
       .obj(
         "cty" -> "application/vc+json".asJson,
+        "jti" -> vc.id.map(id => id.asJson).getOrElse(Json.Null),
         "kid" -> publicKeyRef.asJson,
         "alg" -> signatureAlgo.asJson,
         "iss" -> vc.issuer.asJson,

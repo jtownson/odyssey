@@ -40,12 +40,12 @@ class ContextValidationSpec extends FlatSpec {
     )
   }
 
-  it should "succeed for a single valid string" in {
+  it should "validate but drop, the hardcoded credentials/v1 context (this is hardcoded in the VC datamodel)" in {
     val context = "https://www.w3.org/2018/credentials/v1".asJson
-    context.as[Seq[URI]](contextDecoder) shouldBe Right(Seq(new URI("https://www.w3.org/2018/credentials/v1")))
+    context.as[Seq[URI]](contextDecoder) shouldBe Right(Seq.empty)
   }
 
-  it should "succeed for a mix of URIs and objects" in {
+  it should "validate a mix of URIs and objects" in {
     val context = Json.arr(
       "https://www.w3.org/2018/credentials/v1".asJson,
       Json.obj(
@@ -53,6 +53,6 @@ class ContextValidationSpec extends FlatSpec {
       )
     )
 
-    context.as[Seq[URI]](contextDecoder) shouldBe Right(Seq(new URI("https://www.w3.org/2018/credentials/v1")))
+    context.as[Seq[URI]](contextDecoder) shouldBe Right(Seq.empty)
   }
 }

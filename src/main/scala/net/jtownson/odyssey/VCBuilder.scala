@@ -5,14 +5,13 @@ import java.security.PrivateKey
 import java.time.LocalDateTime
 
 import io.circe.{Json, JsonObject}
-import net.jtownson.odyssey.VCBuilder.MandatoryField
-import net.jtownson.odyssey.VCBuilder.MandatoryField._
-import net.jtownson.odyssey.syntax._
+import net.jtownson.odyssey.VCBuilder.VCField
+import net.jtownson.odyssey.VCBuilder.VCField._
 import org.jose4j.jws.AlgorithmIdentifiers
 
-case class VCBuilder[F <: MandatoryField] private[odyssey] (
-    types: Seq[String] = Seq("VerifiableCredential"),
-    contexts: Seq[URI] = Seq("https://www.w3.org/2018/credentials/v1"),
+case class VCBuilder[F <: VCField] private[odyssey] (
+    additionalTypes: Seq[String] = Seq(),
+    additionalContexts: Seq[URI] = Seq(),
     id: Option[String] = None,
     issuer: Option[URI] = None,
     subjects: Seq[JsonObject] = Seq.empty,
@@ -30,7 +29,7 @@ case class VCBuilder[F <: MandatoryField] private[odyssey] (
     copy(issuer = Some(issuer))
   }
 
-  def withIssuanceDate(iss: LocalDateTime): VCBuilder[F] = {
+  def withIssuanceDate(iss: LocalDateTime): VCBuilder[F with IssuanceDateField] = {
     copy(issuanceDate = Some(iss))
   }
 
@@ -43,11 +42,11 @@ case class VCBuilder[F <: MandatoryField] private[odyssey] (
   }
 
   def withAdditionalType(tpe: String): VCBuilder[F] = {
-    copy(types = types :+ tpe)
+    copy(additionalTypes = additionalTypes :+ tpe)
   }
 
   def withAdditionalContext(ctx: URI): VCBuilder[F] = {
-    copy(contexts = contexts :+ ctx)
+    copy(additionalContexts = additionalContexts :+ ctx)
   }
 
   def withEcdsaSecp256k1Signature2019(
@@ -61,9 +60,13 @@ case class VCBuilder[F <: MandatoryField] private[odyssey] (
     )
   }
 
-  def toJws: String = {
-    val vc = VC(id, issuer.get, issuanceDate.get, expirationDate, types, contexts, subjects)
-    JwsCodec.encodeJws(privateKey.get, publicKeyRef.get, signatureAlgo.get, vc)
+  def dataModel(implicit ev: F =:= MandatoryFields): VC =
+    VC(id, issuer.get, issuanceDate.get, expirationDate, additionalTypes, additionalContexts, subjects)
+
+  // TODO introduce JWSBuilder (or JWSDefinition) and emit that instead of string
+  def toJws(implicit ev: F =:= MandatoryFields): String = {
+    val vc = VC(id, issuer.get, issuanceDate.get, expirationDate, additionalTypes, additionalContexts, subjects)
+    VCJwsCodec.encodeJws(privateKey.get, publicKeyRef.get, signatureAlgo.get, vc)
   }
 }
 
@@ -71,14 +74,14 @@ object VCBuilder {
 
   def apply(): VCBuilder[EmptyField] = VCBuilder[EmptyField]()
 
-  sealed trait MandatoryField
+  sealed trait VCField
 
-  object MandatoryField {
-    sealed trait EmptyField extends MandatoryField
-    sealed trait CredentialSubjectField extends MandatoryField
-    sealed trait SignatureField extends MandatoryField
-    sealed trait IssuerField extends MandatoryField
-    sealed trait IssuanceDateField extends MandatoryField
+  object VCField {
+    sealed trait EmptyField extends VCField
+    sealed trait CredentialSubjectField extends VCField
+    sealed trait SignatureField extends VCField
+    sealed trait IssuerField extends VCField
+    sealed trait IssuanceDateField extends VCField
 
     type MandatoryFields = EmptyField
       with IssuerField

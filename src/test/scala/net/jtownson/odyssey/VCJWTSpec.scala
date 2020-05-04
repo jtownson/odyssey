@@ -31,5 +31,5 @@ or in addition to, their respective standard verifiable credential counterparts:
     sub MUST represent the id property contained in the verifiable credential subject.
     aud MUST represent (i.e., identify) the intended audience of the verifiable presentation
         (i.e., the verifier intended by the presenting holder to receive and verify the verifiable presentation).
- */
+   */
 }

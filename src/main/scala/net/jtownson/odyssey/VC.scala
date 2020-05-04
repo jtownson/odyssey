@@ -1,14 +1,15 @@
 package net.jtownson.odyssey
 
 import java.net.URI
+import java.net.URI.create
 import java.time.LocalDateTime
 
 import io.circe.JsonObject
-import net.jtownson.odyssey.VCBuilder.MandatoryField.EmptyField
+import net.jtownson.odyssey.VCBuilder.VCField.EmptyField
 
 import scala.concurrent.{ExecutionContext, Future}
 
-case class VC(
+case class VC private (
     id: Option[String],
     issuer: URI,
     issuanceDate: LocalDateTime,
@@ -32,10 +33,30 @@ case class VC(
 object VC {
   def apply(): VCBuilder[EmptyField] = VCBuilder()
 
-  def fromJws(algoWhitelist: Seq[String], publicKeyResolver: PublicKeyResolver, jwsSer: String)(
-      implicit ec: ExecutionContext
+  def apply(
+      id: Option[String],
+      issuer: URI,
+      issuanceDate: LocalDateTime,
+      expirationDate: Option[LocalDateTime],
+      additionalTypes: Seq[String] = Seq.empty,
+      additionalContexts: Seq[URI] = Seq.empty,
+      subjects: Seq[JsonObject]
+  ): VC = {
+    new VC(
+      id,
+      issuer,
+      issuanceDate,
+      expirationDate,
+      "VerifiableCredential" +: additionalTypes,
+      create("https://www.w3.org/2018/credentials/v1") +: additionalContexts,
+      subjects
+    )
+  }
+
+  def fromJws(algoWhitelist: Seq[String], publicKeyResolver: PublicKeyResolver, jwsSer: String)(implicit
+      ec: ExecutionContext
   ): Future[VC] =
-    JwsCodec.decodeJws(algoWhitelist, publicKeyResolver, jwsSer)
+    VCJwsCodec.decodeJws(algoWhitelist, publicKeyResolver, jwsSer)
 
   def fromJsonLd(jsonLdSer: String): Either[VerificationError, VC] =
     VCJsonCodec.decodeJsonLd(jsonLdSer)

@@ -27,7 +27,7 @@ object VCJsonCodec {
       obj(
         "@context" -> strOrArr(vc.contexts),
         "id" -> vc.id.map(_.asJson).getOrElse(Json.Null),
-        "type" -> strOrArr(vc.types), // TODO this is wrong. String not valid.
+        "type" -> vc.types.asJson,
         "issuer" -> vc.issuer.asJson,
         "issuanceDate" -> vc.issuanceDate.asJson,
         "expirationDate" -> vc.expirationDate.map(ldt => ldt.asJson).getOrElse(Json.Null),
