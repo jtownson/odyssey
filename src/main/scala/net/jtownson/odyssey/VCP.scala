@@ -4,7 +4,6 @@ import java.io.File
 import scopt.OParser
 
 import scala.io.Source
-import scala.util.Using
 
 /**
   * App to enable running the verifiable credentials test suite.

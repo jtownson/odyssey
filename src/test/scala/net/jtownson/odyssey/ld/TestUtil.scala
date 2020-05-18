@@ -3,10 +3,10 @@ package net.jtownson.odyssey.ld
 import java.io.File
 import java.io.File.separatorChar
 
+import net.jtownson.odyssey.Using
 import org.scalatest.Matchers.fail
 
 import scala.io.Source
-import scala.util.Using
 
 object TestUtil {
   def resourceFile(path: String): File = {

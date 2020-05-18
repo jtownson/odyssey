@@ -5,6 +5,7 @@ import java.io.File.separatorChar
 
 import io.circe.Decoder.Result
 import io.circe.parser
+import net.jtownson.odyssey.Using
 import net.jtownson.odyssey.ld.JsonLdApiSpec.Test.{IgnoredTest, PositiveEvaluationTest, PositiveSyntaxTest}
 import net.jtownson.odyssey.ld.JsonLdApiSpec._
 import org.scalatest.Matchers._
@@ -272,8 +273,7 @@ object JsonLdApiSpec {
 
   def manifestSource(path: String): Future[String] =
     Future {
-      scala.util
-        .Using(Source.fromFile(manifestFile(path), "UTF-8"))(_.mkString)
+      Using(Source.fromFile(manifestFile(path), "UTF-8"))(_.mkString)
         .fold[String](
           t =>
             fail(

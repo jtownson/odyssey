@@ -14,14 +14,14 @@ ThisBuild / developers := List(
     url = url("http://github.com/jtownson")
   )
 )
-ThisBuild / licenses := List("GNU 3" -> new URL("https://www.gnu.org/licenses/gpl-3.0.en.html"))
+ThisBuild / licenses := List("MIT" -> new URL("http://opensource.org/licenses/MIT"))
 ThisBuild / homepage := Some(url("https://github.com/jtownson/odyssey"))
 ThisBuild / pomIncludeRepository := { _ => false }
 ThisBuild / publishTo := sonatypePublishToBundle.value
 ThisBuild / publishMavenStyle := true
 
-ThisBuild / scalaVersion := "2.13.1"
-ThisBuild / version := "0.1.0"
+ThisBuild / scalaVersion := "2.12.10"
+ThisBuild / version := "0.1.1"
 ThisBuild / organization := "net.jtownson"
 ThisBuild / organizationName := "odyssey"
 ThisBuild / scalacOptions := Seq(
@@ -31,6 +31,10 @@ ThisBuild / scalacOptions := Seq(
   "-feature",
   "-language:implicitConversions"
 )
+
+lazy val scala212 = "2.12.10"
+lazy val scala213 = "2.13.1"
+ThisBuild / crossScalaVersions := List(scala212, scala213)
 
 lazy val root = (project in file("."))
   .settings(

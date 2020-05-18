@@ -9,7 +9,6 @@ import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter
 import org.bouncycastle.openssl.{PEMKeyPair, PEMParser}
 
 import scala.io.Source
-import scala.util.Using
 
 object KeyFoo {
 
