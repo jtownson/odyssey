@@ -26,7 +26,7 @@ object TestUtil {
     .withIssuerAttributes("name" -> "Post Office Ltd.")
     .withIssuanceDate(LocalDate.of(2020, 1, 1).atStartOfDay())
     .withExpirationDate(LocalDate.of(2021, 1, 1).atStartOfDay())
-    .withCredentialSubject(
+    .withSubjectAttributes(
       ("id", "did:ata:abc123"),
       ("name", "Her Majesty The Queen"),
       ("jobTitle", "Queen"),

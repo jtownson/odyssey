@@ -43,8 +43,8 @@ case class VCBuilder[F <: VCField] private[odyssey] (
     copy(expirationDate = Some(exp))
   }
 
-  def withCredentialSubject(claims: (String, Json)*): VCBuilder[F with CredentialSubjectField] = {
-    copy(subjects = Seq(JsonObject(claims: _*)))
+  def withSubjectAttributes(subjectAttributes: (String, Json)*): VCBuilder[F with CredentialSubjectField] = {
+    copy(subjects = Seq(JsonObject(subjectAttributes: _*)))
   }
 
   def withAdditionalType(tpe: String): VCBuilder[F] = {
