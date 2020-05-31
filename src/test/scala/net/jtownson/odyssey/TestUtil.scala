@@ -23,6 +23,7 @@ object TestUtil {
     .withAdditionalContext("https://www.w3.org/2018/credentials/examples/v1")
     .withId("https://www.postoffice.co.uk/addresses/1234")
     .withIssuer("https://www.postoffice.co.uk")
+    .withIssuerAttributes("name" -> "Post Office Ltd.")
     .withIssuanceDate(LocalDate.of(2020, 1, 1).atStartOfDay())
     .withExpirationDate(LocalDate.of(2021, 1, 1).atStartOfDay())
     .withCredentialSubject(

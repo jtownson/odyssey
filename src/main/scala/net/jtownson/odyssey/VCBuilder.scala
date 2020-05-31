@@ -5,6 +5,7 @@ import java.security.PrivateKey
 import java.time.LocalDateTime
 
 import io.circe.{Json, JsonObject}
+import io.circe.syntax._
 import net.jtownson.odyssey.VCBuilder.VCField
 import net.jtownson.odyssey.VCBuilder.VCField._
 import org.jose4j.jws.AlgorithmIdentifiers
@@ -14,6 +15,7 @@ case class VCBuilder[F <: VCField] private[odyssey] (
     additionalContexts: Seq[URI] = Seq(),
     id: Option[String] = None,
     issuer: Option[URI] = None,
+    issuerAttributes: Option[JsonObject] = None,
     subjects: Seq[JsonObject] = Seq.empty,
     privateKey: Option[PrivateKey] = None,
     publicKeyRef: Option[URL] = None,
@@ -27,6 +29,10 @@ case class VCBuilder[F <: VCField] private[odyssey] (
 
   def withIssuer(issuer: URI): VCBuilder[F with IssuerField] = {
     copy(issuer = Some(issuer))
+  }
+
+  def withIssuerAttributes(issuerAttributes: (String, Json)*): VCBuilder[F] = {
+    copy(issuerAttributes = Some(JsonObject(issuerAttributes: _*)))
   }
 
   def withIssuanceDate(iss: LocalDateTime): VCBuilder[F with IssuanceDateField] = {
@@ -60,12 +66,20 @@ case class VCBuilder[F <: VCField] private[odyssey] (
     )
   }
 
-  def dataModel(implicit ev: F =:= MandatoryFields): VC =
-    VC(id, issuer.get, issuanceDate.get, expirationDate, additionalTypes, additionalContexts, subjects)
+  private def buildIssuer: Json =
+    issuerAttributes match {
+      case Some(attributes) =>
+        attributes.+:("id", issuer.get.toString.asJson).asJson
+      case None =>
+        issuer.get.toString.asJson
+    }
 
-  // TODO introduce JWSBuilder (or JWSDefinition) and emit that instead of string
+  def dataModel(implicit ev: F =:= MandatoryFields): VC =
+    VC(id, buildIssuer, issuanceDate.get, expirationDate, additionalTypes, additionalContexts, subjects)
+
+  // TODO introduce JWS abstraction and emit that instead of string
   def toJws(implicit ev: F =:= MandatoryFields): String = {
-    val vc = VC(id, issuer.get, issuanceDate.get, expirationDate, additionalTypes, additionalContexts, subjects)
+    val vc = VC(id, buildIssuer, issuanceDate.get, expirationDate, additionalTypes, additionalContexts, subjects)
     VCJwsCodec.encodeJws(privateKey.get, publicKeyRef.get, signatureAlgo.get, vc)
   }
 }

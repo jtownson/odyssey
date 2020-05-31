@@ -8,6 +8,7 @@ import io.circe._
 import io.circe.parser.decode
 import io.circe.syntax._
 import net.jtownson.odyssey.ContextValidation.contextDecoder
+import net.jtownson.odyssey.IssuerValidation.issuerDecoder
 import net.jtownson.odyssey.TypeValidation.typeDecoder
 import net.jtownson.odyssey.VerificationError.ParseError
 
@@ -42,7 +43,7 @@ object VCJsonCodec {
         id <- hc.downField("id").as[Option[String]]
         types <- hc.downField("type").as[Seq[String]](typeDecoder("VerifiableCredential"))
         contexts <- hc.downField("@context").as[Seq[URI]](contextDecoder)
-        issuer <- hc.downField("issuer").as[URI](absoluteUriDecoder)
+        issuer <- hc.downField("issuer").as[Json](issuerDecoder)
         issuanceDate <- hc.downField("issuanceDate").as[LocalDateTime]
         expirationDate <- hc.downField("expirationDate").as[Option[LocalDateTime]]
         credentialSubject <- hc.downField("credentialSubject").as[Json]

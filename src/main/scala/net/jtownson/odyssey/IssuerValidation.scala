@@ -1,0 +1,40 @@
+package net.jtownson.odyssey
+
+import java.net.URI
+
+import io.circe.syntax._
+import io.circe.{Decoder, DecodingFailure, HCursor, Json, JsonObject}
+
+import scala.util.Try
+
+object IssuerValidation {
+
+  val failureMessage = "Sec 4.5: the issuer property MUST be either a URI or an object containing an id property."
+
+  def issuerDecoder: Decoder[Json] = { (hc: HCursor) =>
+    {
+      lazy val fail = DecodingFailure(failureMessage, hc.history)
+      lazy val failResult: Decoder.Result[Json] = Left(fail)
+
+      def verifyUri(s: String): Decoder.Result[Json] = {
+        Try(new URI(s)).toEither.left
+          .map(_ => fail)
+          .map(_ => s.asJson)
+      }
+
+      def verifyObject(obj: JsonObject): Decoder.Result[Json] = {
+        obj.toMap.get("id").fold(failResult)(json => Right(obj.asJson))
+      }
+
+      hc.value.fold(
+        jsonNull = failResult,
+        jsonBoolean = _ => failResult,
+        jsonNumber = _ => failResult,
+        jsonString = verifyUri,
+        jsonArray = _ => failResult,
+        jsonObject = verifyObject
+      )
+    }
+  }
+
+}
