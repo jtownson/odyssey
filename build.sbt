@@ -21,7 +21,7 @@ ThisBuild / publishTo := sonatypePublishToBundle.value
 ThisBuild / publishMavenStyle := true
 
 ThisBuild / scalaVersion := "2.12.10"
-ThisBuild / version := "0.1.2"
+ThisBuild / version := "0.1.3"
 ThisBuild / organization := "net.jtownson"
 ThisBuild / organizationName := "odyssey"
 ThisBuild / scalacOptions := Seq(
@@ -51,6 +51,5 @@ lazy val root = (project in file("."))
         `bouncy-castle` ++
         jose ++
         scopt ++
-        `slf4j-nop` ++
         scalaTest
   )

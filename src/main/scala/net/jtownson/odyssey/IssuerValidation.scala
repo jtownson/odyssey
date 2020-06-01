@@ -17,7 +17,10 @@ object IssuerValidation {
       lazy val failResult: Decoder.Result[Json] = Left(fail)
 
       def verifyUri(s: String): Decoder.Result[Json] = {
-        Try(new URI(s)).toEither.left
+        Try(new URI(s))
+          .filter(_.isAbsolute)
+          .toEither
+          .left
           .map(_ => fail)
           .map(_ => s.asJson)
       }

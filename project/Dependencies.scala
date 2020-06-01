@@ -23,8 +23,4 @@ object Dependencies {
   lazy val scopt = Seq(
     "com.github.scopt" %% "scopt" % "4.0.0-RC2"
   )
-
-  lazy val `slf4j-nop` = Seq(
-    "org.slf4j" % "slf4j-nop" % "1.7.26"
-  )
 }
