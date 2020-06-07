@@ -14,8 +14,8 @@ trait Signer {
 
 object Signer {
 
-  // Example asymmetric
-  class ES256Signer(publicKeyRef: URL, privateKey: PrivateKey) extends Signer {
+  // Example asymmetric signer
+  class Es256Signer(publicKeyRef: URL, privateKey: PrivateKey) extends Signer {
 
     private val kid = publicKeyRef.toString
 
@@ -33,8 +33,8 @@ object Signer {
     }
   }
 
-  // Example symmetric signature
-  class HMACSha256Signer(secret: Array[Byte]) extends Signer {
+  // Example symmetric signer
+  class HmacSha256Signer(secret: Array[Byte]) extends Signer {
 
     private val key = new SecretKeySpec(secret, "HmacSHA256")
 

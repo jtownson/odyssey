@@ -5,7 +5,7 @@ import java.util.Base64
 
 import io.circe.syntax._
 import io.circe.{DecodingFailure, Json, JsonObject, ParsingFailure, Printer}
-import net.jtownson.odyssey.Jws.JwsField.{EmptyField, SignatureField}
+import net.jtownson.odyssey.Jws.JwsField.{EmptyField, JsonPayloadField, SignatureField}
 import net.jtownson.odyssey.Jws.{JwsField, MandatoryFields, utf8}
 import net.jtownson.odyssey.VerificationError.InvalidSignature
 import org.jose4j.lang.StringUtil
@@ -20,7 +20,8 @@ case class Jws[F <: JwsField] private[odyssey] (
     printer: Printer = Printer.spaces2,
     protectedHeaders: Map[String, Json] = Map.empty,
     payload: Array[Byte] = Array.empty,
-    signer: Option[Signer] = None
+    signer: Option[Signer] = None,
+    signature: Option[Array[Byte]] = None
 ) {
 
   def withJsonPrinter(printer: Printer): Jws[F] = {
@@ -63,8 +64,16 @@ case class Jws[F <: JwsField] private[odyssey] (
     signer.setHeaderParameters(this).copy(signer = Some(signer))
   }
 
+  private def withSignature(signature: Array[Byte]): Jws[F with SignatureField] = {
+    copy(signature = Some(signature))
+  }
+
   def compactSerializion(implicit ev: F =:= MandatoryFields): String = {
-    Jws.compactSerialization(utf8ProtectedHeader, payload, signer.get)
+    if (signature.isDefined) {
+      Jws.compactSerialization(utf8ProtectedHeader, payload, signature.get)
+    } else {
+      Jws.compactSerialization(utf8ProtectedHeader, payload, signer.get)
+    }
   }
 
   def utf8ProtectedHeader: Array[Byte] = {
@@ -74,14 +83,12 @@ case class Jws[F <: JwsField] private[odyssey] (
 
 object Jws {
 
-  trait SignerVerifier extends Signer with Verifier
-
   def apply(): Jws[EmptyField] = new Jws[EmptyField]()
 
-  def fromCompactSerialization(ser: String, signerVerifier: SignerVerifier)(implicit ec: ExecutionContext) = {
+  def fromCompactSerialization(ser: String, verifier: Verifier)(implicit ec: ExecutionContext) = {
     parse(ser) match {
       case Success(ParseResult(protectedHeaders, signerInput, payload, signature)) =>
-        signerVerifier
+        verifier
           .verify(protectedHeaders, signerInput, signature)
           .flatMap { success: Boolean =>
             if (success) {
@@ -89,7 +96,7 @@ object Jws {
                 Jws()
                   .withHeaders(protectedHeaders)
                   .withRawPayload(payload)
-                  .withSigner(signerVerifier)
+                  .withSignature(signature)
               )
             } else {
               Future.failed(InvalidSignature())
@@ -104,6 +111,7 @@ object Jws {
 
   object JwsField {
     sealed trait EmptyField extends JwsField
+    sealed trait JsonPayloadField extends JwsField
     sealed trait SignatureField extends JwsField
   }
 
@@ -140,6 +148,14 @@ object Jws {
       signingDevice: Signer
   ): String = {
     val signature = sign(utf8ProtectedHeader, payload, signingDevice)
+    compactSerialization(utf8ProtectedHeader, payload, signature)
+  }
+
+  def compactSerialization(
+      utf8ProtectedHeader: Array[Byte],
+      payload: Array[Byte],
+      signature: Array[Byte]
+  ): String = {
     //    BASE64URL(UTF8(JWS Protected Header)) || '.' ||
     //    BASE64URL(JWS Payload) || '.' ||
     //    BASE64URL(JWS Signature)

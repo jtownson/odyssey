@@ -12,7 +12,7 @@ import scala.concurrent.Future
 object TestUtil {
   val (publicKeyRef, privateKey): (URL, PrivateKey) = KeyFoo.getKeyPair
 
-  val dummyKeyResolver: PublicKeyResolver = { (publicKeyRef: URL) =>
+  val testKeyResolver: PublicKeyResolver = { (publicKeyRef: URL) =>
     Future.successful(KeyFoo.getPublicKeyFromRef(publicKeyRef))
   }
 

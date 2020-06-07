@@ -11,7 +11,7 @@ class VCJwsCodecSpec extends FlatSpec {
   "VPJwsCodec" should "parse a generated JWT" in {
     val jws = TestUtil.aCredential.toJws
 
-    val vc: VC = VC.fromJws(TestUtil.whitelistedAlgos, TestUtil.dummyKeyResolver, jws).futureValue
+    val vc: VC = VC.fromJws(TestUtil.whitelistedAlgos, TestUtil.testKeyResolver, jws).futureValue
 
     vc shouldBe TestUtil.aCredential.dataModel
   }
