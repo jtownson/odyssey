@@ -6,6 +6,7 @@ import java.time.LocalDateTime
 
 import io.circe.{Json, JsonObject}
 import net.jtownson.odyssey.VCBuilder.VCField.EmptyField
+import net.jtownson.odyssey.impl.{VCJsonCodec, VCJwsCodec}
 
 import scala.concurrent.{ExecutionContext, Future}
 

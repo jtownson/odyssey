@@ -1,5 +1,6 @@
-package net.jtownson.odyssey
+package net.jtownson.odyssey.impl
 
+import net.jtownson.odyssey.{TestUtil, VC}
 import org.scalatest.FlatSpec
 import org.scalatest.Matchers._
 import org.scalatest.concurrent.ScalaFutures._

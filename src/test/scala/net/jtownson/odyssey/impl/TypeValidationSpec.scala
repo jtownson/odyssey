@@ -1,4 +1,4 @@
-package net.jtownson.odyssey
+package net.jtownson.odyssey.impl
 
 import io.circe.DecodingFailure
 import io.circe.syntax._

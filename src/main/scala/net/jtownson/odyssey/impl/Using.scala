@@ -1,4 +1,4 @@
-package net.jtownson.odyssey
+package net.jtownson.odyssey.impl
 
 import scala.util.{Failure, Success, Try}
 

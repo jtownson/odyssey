@@ -1,4 +1,4 @@
-package net.jtownson.odyssey
+package net.jtownson.odyssey.impl
 
 import java.net.URI
 import java.time.LocalDateTime
@@ -7,10 +7,11 @@ import io.circe.Json.obj
 import io.circe._
 import io.circe.parser.decode
 import io.circe.syntax._
-import net.jtownson.odyssey.ContextValidation.contextDecoder
-import net.jtownson.odyssey.IssuerValidation.issuerDecoder
-import net.jtownson.odyssey.TypeValidation.typeDecoder
 import net.jtownson.odyssey.VerificationError.ParseError
+import net.jtownson.odyssey.impl.ContextValidation.contextDecoder
+import net.jtownson.odyssey.impl.IssuerValidation.issuerDecoder
+import net.jtownson.odyssey.impl.TypeValidation.typeDecoder
+import net.jtownson.odyssey.{VC, VerificationError}
 
 /**
   * Circe encoder/decoder to write verifiable credential data model.

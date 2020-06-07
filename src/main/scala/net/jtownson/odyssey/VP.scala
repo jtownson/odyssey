@@ -4,6 +4,7 @@ import java.net.URI
 import java.net.URI.create
 
 import net.jtownson.odyssey.VPBuilder.VPField.EmptyField
+import net.jtownson.odyssey.impl.{VPJsonCodec, VPJwsCodec}
 
 import scala.concurrent.{ExecutionContext, Future}
 

@@ -1,6 +1,7 @@
 package net.jtownson.odyssey
 import java.io.File
 
+import net.jtownson.odyssey.impl.Using
 import scopt.OParser
 
 import scala.io.Source

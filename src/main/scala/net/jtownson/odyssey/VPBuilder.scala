@@ -7,6 +7,7 @@ import net.jtownson.odyssey.Signer.Es256Signer
 import net.jtownson.odyssey.VCBuilder.VCField
 import net.jtownson.odyssey.VPBuilder.VPField
 import net.jtownson.odyssey.VPBuilder.VPField.{EmptyField, MandatoryFields, SignatureField}
+import net.jtownson.odyssey.impl.VPJwsCodec
 
 case class VPBuilder[F <: VPField, G <: VCField] private[odyssey] (
     id: Option[String] = None,

@@ -1,4 +1,4 @@
-package net.jtownson.odyssey
+package net.jtownson.odyssey.impl
 
 import io.circe.Json
 import net.jtownson.odyssey.TestUtil.aCredential

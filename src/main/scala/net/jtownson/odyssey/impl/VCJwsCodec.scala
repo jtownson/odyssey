@@ -1,11 +1,13 @@
-package net.jtownson.odyssey
+package net.jtownson.odyssey.impl
 
 import java.time.ZoneOffset
 
 import io.circe
-import io.circe.syntax._
 import io.circe.Json
+import io.circe.syntax._
 import net.jtownson.odyssey.VerificationError.ParseError
+import net.jtownson.odyssey.{Jws, Signer, VC, Verifier}
+
 import scala.concurrent.{ExecutionContext, Future}
 
 // Encode and decode verifiable credentials as application/vc+json+jwt

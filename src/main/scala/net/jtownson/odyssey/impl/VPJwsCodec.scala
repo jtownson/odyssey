@@ -1,9 +1,10 @@
-package net.jtownson.odyssey
+package net.jtownson.odyssey.impl
 
 import io.circe
 import io.circe.Json
 import io.circe.syntax._
 import net.jtownson.odyssey.VerificationError.ParseError
+import net.jtownson.odyssey.{Jws, Signer, VP, Verifier}
 
 import scala.concurrent.{ExecutionContext, Future}
 

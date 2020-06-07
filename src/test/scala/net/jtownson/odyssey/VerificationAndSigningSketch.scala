@@ -5,8 +5,8 @@ import java.security.PrivateKey
 import java.time.LocalDate
 
 import io.circe.Printer
-import net.jtownson.odyssey.VerificationAndSigningSketch.{dummyKeyResolver, whitelistedAlgos}
 import net.jtownson.odyssey.Verifier.Es256Verifier
+import net.jtownson.odyssey.impl.VCJsonCodec
 import org.jose4j.jws.AlgorithmIdentifiers.ECDSA_USING_P256_CURVE_AND_SHA256
 import org.scalatest.FlatSpec
 import org.scalatest.concurrent.ScalaFutures._

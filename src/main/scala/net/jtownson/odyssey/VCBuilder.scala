@@ -9,6 +9,7 @@ import io.circe.syntax._
 import net.jtownson.odyssey.Signer.Es256Signer
 import net.jtownson.odyssey.VCBuilder.VCField
 import net.jtownson.odyssey.VCBuilder.VCField._
+import net.jtownson.odyssey.impl.VCJwsCodec
 
 case class VCBuilder[F <: VCField] private[odyssey] (
     additionalTypes: Seq[String] = Seq(),

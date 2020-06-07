@@ -1,10 +1,10 @@
-package net.jtownson.odyssey
+package net.jtownson.odyssey.impl
 
 import java.net.URI
 
 import io.circe.syntax._
 import io.circe.{DecodingFailure, Json}
-import net.jtownson.odyssey.ContextValidation.contextDecoder
+import net.jtownson.odyssey.impl.ContextValidation.contextDecoder
 import org.scalatest.FlatSpec
 import org.scalatest.Matchers._
 
