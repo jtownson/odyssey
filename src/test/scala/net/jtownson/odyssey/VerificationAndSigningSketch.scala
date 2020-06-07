@@ -24,13 +24,14 @@ class VerificationAndSigningSketch extends FlatSpec {
     .withAdditionalContext("https://www.w3.org/2018/credentials/examples/v1")
     .withId("https://www.postoffice.co.uk/addresses/1234")
     .withIssuer("https://www.postoffice.co.uk")
+    .withIssuerAttributes("contact" -> "https://www.postoffice.co.uk/contact-us")
     .withIssuanceDate(LocalDate.of(2020, 1, 1).atStartOfDay())
     .withExpirationDate(LocalDate.of(2021, 1, 1).atStartOfDay())
     .withSubjectAttributes(
-      ("id", "did:ata:abc123"),
-      ("name", "Her Majesty The Queen"),
-      ("jobTitle", "Queen"),
-      ("address", "Buckingham Palace, SW1A 1AA")
+      "id" -> "did:ata:abc123",
+      "name" -> "Her Majesty The Queen",
+      "jobTitle" -> "Queen",
+      "address" -> "Buckingham Palace, SW1A 1AA"
     )
     .withEs256Signature(publicKeyRef, privateKey)
 
