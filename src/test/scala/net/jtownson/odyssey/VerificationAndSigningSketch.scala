@@ -6,7 +6,6 @@ import java.time.LocalDate
 
 import io.circe.Printer
 import net.jtownson.odyssey.Verifier.Es256Verifier
-import net.jtownson.odyssey.impl.VCJsonCodec
 import org.jose4j.jws.AlgorithmIdentifiers.ECDSA_USING_P256_CURVE_AND_SHA256
 import org.scalatest.FlatSpec
 import org.scalatest.concurrent.ScalaFutures._
@@ -49,9 +48,10 @@ class VerificationAndSigningSketch extends FlatSpec {
     Future.successful(KeyFoo.getPublicKeyFromRef(publicKeyRef))
   val verifier = new Es256Verifier(publicKeyResolver)
 
-  val parseResult: VC = VC.fromJwsCompactSer(verifier, jws).futureValue
+  val parseResult: VCDataModel = VCDataModel.fromJwsCompactSer(verifier, jws).futureValue
 
   println(s"Received dataset has a valid signature and decodes to the following dataset:")
+  import net.jtownson.odyssey.impl.VCJsonCodec
   println(VCJsonCodec.vcJsonEncoder(parseResult).printWith(Printer.spaces2))
 }
 

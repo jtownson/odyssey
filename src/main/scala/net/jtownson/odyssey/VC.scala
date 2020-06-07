@@ -1,64 +1,105 @@
 package net.jtownson.odyssey
 
-import java.net.URI
-import java.net.URI.create
+import java.net.{URI, URL}
+import java.security.PrivateKey
 import java.time.LocalDateTime
 
 import io.circe.{Json, JsonObject}
-import net.jtownson.odyssey.VCBuilder.VCField.EmptyField
-import net.jtownson.odyssey.impl.{VCJsonCodec, VCJwsCodec}
+import io.circe.syntax._
+import net.jtownson.odyssey.Signer.Es256Signer
+import net.jtownson.odyssey.VC.VCField
+import net.jtownson.odyssey.VC.VCField._
+import net.jtownson.odyssey.impl.VCJwsCodec
 
-import scala.concurrent.{ExecutionContext, Future}
-
-case class VC private (
-    id: Option[String],
-    issuer: Json,
-    issuanceDate: LocalDateTime,
-    expirationDate: Option[LocalDateTime],
-    types: Seq[String],
-    contexts: Seq[URI],
-    subjects: Seq[JsonObject]
-)
-
-/**
-  * TODO
-  * --> arbitrary content with content-type
-  * --> resolver configuration
-  * ------> uni did resolver resolver
-  * ------> https resolver
-  * ------> prism-node resolver
-  * --> review of claims headers
-  * --> canned credentials wrappers (self-signed auth-token, interactive demo creds, ?)
-  *
-  */
-object VC {
-  def apply(): VCBuilder[EmptyField] = VCBuilder()
-
-  def apply(
-      id: Option[String],
-      issuer: Json,
-      issuanceDate: LocalDateTime,
-      expirationDate: Option[LocalDateTime],
-      additionalTypes: Seq[String] = Seq.empty,
-      additionalContexts: Seq[URI] = Seq.empty,
-      subjects: Seq[JsonObject]
-  ): VC = {
-    new VC(
-      id,
-      issuer,
-      issuanceDate,
-      expirationDate,
-      "VerifiableCredential" +: additionalTypes,
-      create("https://www.w3.org/2018/credentials/v1") +: additionalContexts,
-      subjects
-    )
+case class VC[F <: VCField] private[odyssey] (
+    additionalTypes: Seq[String] = Seq(),
+    additionalContexts: Seq[URI] = Seq(),
+    id: Option[String] = None,
+    issuer: Option[URI] = None,
+    issuerAttributes: Option[JsonObject] = None,
+    subjects: Seq[JsonObject] = Seq.empty,
+    signer: Option[Signer] = None,
+    issuanceDate: Option[LocalDateTime] = None,
+    expirationDate: Option[LocalDateTime] = None
+) {
+  def withId(id: String): VC[F] = {
+    copy(id = Some(id))
   }
 
-  def fromJwsCompactSer(verifier: Verifier, jwsSer: String)(implicit
-      ec: ExecutionContext
-  ): Future[VC] =
-    VCJwsCodec.fromJwsCompactSer(verifier, jwsSer)
+  def withIssuer(issuer: URI): VC[F with IssuerField] = {
+    copy(issuer = Some(issuer))
+  }
 
-  def fromJsonLd(jsonLdSer: String): Either[VerificationError, VC] =
-    VCJsonCodec.decodeJsonLd(jsonLdSer)
+  def withIssuerAttributes(issuerAttributes: (String, Json)*): VC[F] = {
+    copy(issuerAttributes = Some(JsonObject(issuerAttributes: _*)))
+  }
+
+  def withIssuanceDate(iss: LocalDateTime): VC[F with IssuanceDateField] = {
+    copy(issuanceDate = Some(iss))
+  }
+
+  def withExpirationDate(exp: LocalDateTime): VC[F] = {
+    copy(expirationDate = Some(exp))
+  }
+
+  def withSubjectAttributes(subjectAttributes: (String, Json)*): VC[F with CredentialSubjectField] = {
+    copy(subjects = Seq(JsonObject(subjectAttributes: _*)))
+  }
+
+  def withAdditionalType(tpe: String): VC[F] = {
+    copy(additionalTypes = additionalTypes :+ tpe)
+  }
+
+  def withAdditionalContext(ctx: URI): VC[F] = {
+    copy(additionalContexts = additionalContexts :+ ctx)
+  }
+
+  def withSigner(signer: Signer): VC[F with SignatureField] = {
+    copy(signer = Some(signer))
+  }
+
+  def withEs256Signature(
+      publicKeyRef: URL,
+      privateKey: PrivateKey
+  ): VC[F with SignatureField] = {
+    withSigner(new Es256Signer(publicKeyRef, privateKey))
+  }
+
+  private def buildIssuer: Json =
+    issuerAttributes match {
+      case Some(attributes) =>
+        attributes.+:("id", issuer.get.toString.asJson).asJson
+      case None =>
+        issuer.get.toString.asJson
+    }
+
+  def dataModel(implicit ev: F =:= MandatoryFields): VCDataModel =
+    VCDataModel(id, buildIssuer, issuanceDate.get, expirationDate, additionalTypes, additionalContexts, subjects)
+
+  def toJws(implicit ev: F =:= MandatoryFields) = {
+    val vc =
+      VCDataModel(id, buildIssuer, issuanceDate.get, expirationDate, additionalTypes, additionalContexts, subjects)
+    VCJwsCodec.toJws(signer.get, vc)
+  }
+}
+
+object VC {
+
+  def apply(): VC[EmptyField] = VC[EmptyField]()
+
+  sealed trait VCField
+
+  object VCField {
+    sealed trait EmptyField extends VCField
+    sealed trait CredentialSubjectField extends VCField
+    sealed trait SignatureField extends VCField
+    sealed trait IssuerField extends VCField
+    sealed trait IssuanceDateField extends VCField
+
+    type MandatoryFields = EmptyField
+      with IssuerField
+      with IssuanceDateField
+      with CredentialSubjectField
+      with SignatureField
+  }
 }

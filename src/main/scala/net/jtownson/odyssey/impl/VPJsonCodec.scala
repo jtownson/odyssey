@@ -9,7 +9,7 @@ import io.circe.{Decoder, Encoder, HCursor, Json}
 import net.jtownson.odyssey.VerificationError.ParseError
 import net.jtownson.odyssey.impl.ContextValidation.contextDecoder
 import net.jtownson.odyssey.impl.TypeValidation.typeDecoder
-import net.jtownson.odyssey.{VC, VP, VerificationError}
+import net.jtownson.odyssey.{VCDataModel, VPDataModel, VerificationError}
 
 /**
   * Circe encoder/decoder to write verifiable presentations.
@@ -21,12 +21,12 @@ object VPJsonCodec {
   implicit val vcEncoder = VCJsonCodec.vcJsonEncoder
   implicit val vcDecoder = VCJsonCodec.vcJsonDecoder
 
-  def decodeJsonLd(jsonLdSer: String): Either[VerificationError, VP] = {
+  def decodeJsonLd(jsonLdSer: String): Either[VerificationError, VPDataModel] = {
     decode(jsonLdSer)(vpJsonDecoder).left.map(err => ParseError(err.getMessage))
   }
 
-  def vpJsonEncoder: Encoder[VP] = {
-    Encoder.instance { vp: VP =>
+  def vpJsonEncoder: Encoder[VPDataModel] = {
+    Encoder.instance { vp: VPDataModel =>
       obj(
         "@context" -> strOrArr(vp.contexts),
         "id" -> vp.id.map(_.asJson).getOrElse(Json.Null),
@@ -38,17 +38,17 @@ object VPJsonCodec {
     }
   }
 
-  def vpJsonDecoder: Decoder[VP] = {
+  def vpJsonDecoder: Decoder[VPDataModel] = {
     Decoder.instance { hc: HCursor =>
       for {
         id <- hc.downField("id").as[Option[String]]
         types <- hc.downField("type").as[Seq[String]](typeDecoder("VerifiablePresentation"))
         contexts <- hc.downField("@context").as[Seq[URI]](contextDecoder)
-        vc <- hc.downField("verifiableCredential").as[Seq[VC]]
+        vc <- hc.downField("verifiableCredential").as[Seq[VCDataModel]]
         holder <- hc.downField("holder").as[Option[URI]]
         _ <- hc.downField("proof").as[Json]
       } yield {
-        VP(additionalContexts = contexts, id = id, additionalTypes = types, vc, holder)
+        VPDataModel(additionalContexts = contexts, id = id, additionalTypes = types, vc, holder)
       }
     }
   }

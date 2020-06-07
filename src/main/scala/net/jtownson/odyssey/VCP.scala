@@ -35,14 +35,14 @@ object VCP extends App {
     config.file.foreach { file =>
       Using(Source.fromFile(file, "UTF-8"))(_.mkString).foreach { jsonLd =>
         if (config.tpe == "VerifiableCredential") {
-          VC.fromJsonLd(jsonLd) match {
+          VCDataModel.fromJsonLd(jsonLd) match {
             case Left(err) =>
               System.err.println(s"Error processing verifiable credential: ${err.getMessage}")
             case Right(_) =>
               print(jsonLd)
           }
         } else {
-          VP.fromJsonLd(jsonLd) match {
+          VPDataModel.fromJsonLd(jsonLd) match {
             case Left(err) =>
               System.err.println(s"Error processing verifiable presentation: ${err.getMessage}.")
             case Right(vp) =>

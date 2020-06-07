@@ -7,7 +7,6 @@ import java.util.Base64
 
 import net.jtownson.odyssey.Signer.{Es256Signer, HmacSha256Signer}
 import net.jtownson.odyssey.Verifier.{Es256Verifier, HmacSha256Verifier}
-import org.jose4j.jws.AlgorithmIdentifiers.ECDSA_USING_P256_CURVE_AND_SHA256
 import syntax._
 
 import scala.concurrent.Future

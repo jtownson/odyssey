@@ -4,7 +4,7 @@ import io.circe
 import io.circe.Json
 import io.circe.syntax._
 import net.jtownson.odyssey.VerificationError.ParseError
-import net.jtownson.odyssey.{Jws, Signer, VP, Verifier}
+import net.jtownson.odyssey.{Jws, Signer, VPDataModel, Verifier}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -12,23 +12,23 @@ import scala.concurrent.{ExecutionContext, Future}
 object VPJwsCodec {
   import CodecStuff._
 
-  def toJws(signer: Signer, vp: VP) = {
+  def toJws(signer: Signer, vp: VPDataModel) = {
     Jws()
       .withHeaders(jsonHeaders(vp))
       .withSigner(signer)
   }
 
-  def fromJwsCompactSer(verifier: Verifier, jwsSer: String)(implicit ec: ExecutionContext): Future[VP] = {
+  def fromJwsCompactSer(verifier: Verifier, jwsSer: String)(implicit ec: ExecutionContext): Future[VPDataModel] = {
     Jws.fromCompactSer(jwsSer, verifier).flatMap { jws =>
       jws.protectedHeaders
         .get("vp")
-        .fold(Future.failed[VP](ParseError("Missing vp header in JWS")))(vpJson =>
+        .fold(Future.failed[VPDataModel](ParseError("Missing vp header in JWS")))(vpJson =>
           toFuture(VPJsonCodec.vpJsonDecoder(vpJson.hcursor))
         )
     }
   }
 
-  private def jsonHeaders(vp: VP): Map[String, Json] = {
+  private def jsonHeaders(vp: VPDataModel): Map[String, Json] = {
     import VPJsonCodec._
     Seq(
       Some("cty" -> "application/vp+json".asJson),
@@ -38,7 +38,7 @@ object VPJwsCodec {
     ).flatten.toMap
   }
 
-  private def toFuture(e: Either[circe.Error, VP]): Future[VP] = {
+  private def toFuture(e: Either[circe.Error, VPDataModel]): Future[VPDataModel] = {
     e.left.map(circeError => ParseError(circeError.getMessage)).fold(Future.failed, Future.successful)
   }
 }

@@ -11,7 +11,7 @@ import net.jtownson.odyssey.VerificationError.ParseError
 import net.jtownson.odyssey.impl.ContextValidation.contextDecoder
 import net.jtownson.odyssey.impl.IssuerValidation.issuerDecoder
 import net.jtownson.odyssey.impl.TypeValidation.typeDecoder
-import net.jtownson.odyssey.{VC, VerificationError}
+import net.jtownson.odyssey.{VCDataModel, VerificationError}
 
 /**
   * Circe encoder/decoder to write verifiable credential data model.
@@ -20,12 +20,12 @@ object VCJsonCodec {
 
   import CodecStuff._
 
-  def decodeJsonLd(jsonLdSer: String): Either[VerificationError, VC] = {
+  def decodeJsonLd(jsonLdSer: String): Either[VerificationError, VCDataModel] = {
     decode(jsonLdSer)(vcJsonDecoder).left.map(err => ParseError(err.getMessage))
   }
 
-  def vcJsonEncoder: Encoder[VC] = {
-    Encoder.instance { vc: VC =>
+  def vcJsonEncoder: Encoder[VCDataModel] = {
+    Encoder.instance { vc: VCDataModel =>
       obj(
         "@context" -> strOrArr(vc.contexts),
         "id" -> vc.id.map(_.asJson).getOrElse(Json.Null),
@@ -38,7 +38,7 @@ object VCJsonCodec {
     }
   }
 
-  def vcJsonDecoder: Decoder[VC] = {
+  def vcJsonDecoder: Decoder[VCDataModel] = {
     Decoder.instance { hc: HCursor =>
       for {
         id <- hc.downField("id").as[Option[String]]
@@ -50,7 +50,7 @@ object VCJsonCodec {
         credentialSubject <- hc.downField("credentialSubject").as[Json]
       } yield {
         val subject: Seq[JsonObject] = foldCredentialSubject(credentialSubject)
-        VC(id, issuer, issuanceDate, expirationDate, types, contexts, subject)
+        VCDataModel(id, issuer, issuanceDate, expirationDate, types, contexts, subject)
       }
     }
   }
