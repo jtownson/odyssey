@@ -3,19 +3,17 @@ package net.jtownson.odyssey
 import java.net.{URI, URL}
 import java.security.PrivateKey
 
+import net.jtownson.odyssey.Signer.Es256Signer
 import net.jtownson.odyssey.VCBuilder.VCField
 import net.jtownson.odyssey.VPBuilder.VPField
 import net.jtownson.odyssey.VPBuilder.VPField.{EmptyField, MandatoryFields, SignatureField}
-import org.jose4j.jws.AlgorithmIdentifiers
 
 case class VPBuilder[F <: VPField, G <: VCField] private[odyssey] (
     id: Option[String] = None,
     holder: Option[URI] = None,
     additionalTypes: Seq[String] = Seq(),
     additionalContexts: Seq[URI] = Seq(),
-    privateKey: Option[PrivateKey] = None,
-    publicKeyRef: Option[URL] = None,
-    signatureAlgo: Option[String] = None,
+    signer: Option[Signer] = None,
     vc: Option[VCBuilder[G]] = None
 ) {
 
@@ -35,15 +33,15 @@ case class VPBuilder[F <: VPField, G <: VCField] private[odyssey] (
     copy(holder = Some(holder))
   }
 
-  def withEcdsaSecp256k1Signature2019(
+  def withEs256Signature(
       publicKeyRef: URL,
       privateKey: PrivateKey
   ): VPBuilder[F with SignatureField, G] = {
-    copy(
-      privateKey = Some(privateKey),
-      publicKeyRef = Some(publicKeyRef),
-      signatureAlgo = Some(AlgorithmIdentifiers.ECDSA_USING_P256_CURVE_AND_SHA256)
-    )
+    withSigner(new Es256Signer(publicKeyRef, privateKey))
+  }
+
+  def withSigner(signer: Signer): VPBuilder[F with SignatureField, G] = {
+    copy(signer = Some(signer))
   }
 
   // TODO multiple VCs will need HLists I suppose - joy
@@ -56,8 +54,8 @@ case class VPBuilder[F <: VPField, G <: VCField] private[odyssey] (
     VP(additionalContexts, id, additionalTypes, vcs, holder)
   }
 
-  def toJws(implicit ev1: F =:= MandatoryFields, ev2: G =:= VCField.MandatoryFields): String = {
-    VPJwsCodec.encodeJws(privateKey.get, publicKeyRef.get, signatureAlgo.get, dataModel)
+  def toJws(implicit ev1: F =:= MandatoryFields, ev2: G =:= VCField.MandatoryFields) = {
+    VPJwsCodec.toJws(signer.get, dataModel)
   }
 }
 

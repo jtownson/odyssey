@@ -1,14 +1,13 @@
 package net.jtownson.odyssey
 
-import java.nio.charset.StandardCharsets.UTF_8
+import java.nio.charset.StandardCharsets.{US_ASCII, UTF_8}
 import java.util.Base64
 
 import io.circe.syntax._
-import io.circe.{DecodingFailure, Json, JsonObject, ParsingFailure, Printer}
-import net.jtownson.odyssey.Jws.JwsField.{EmptyField, JsonPayloadField, SignatureField}
+import io.circe._
+import net.jtownson.odyssey.Jws.JwsField.{EmptyField, SignatureField}
 import net.jtownson.odyssey.Jws.{JwsField, MandatoryFields, utf8}
 import net.jtownson.odyssey.VerificationError.InvalidSignature
-import org.jose4j.lang.StringUtil
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
@@ -85,7 +84,7 @@ object Jws {
 
   def apply(): Jws[EmptyField] = new Jws[EmptyField]()
 
-  def fromCompactSerialization(ser: String, verifier: Verifier)(implicit ec: ExecutionContext) = {
+  def fromCompactSer(ser: String, verifier: Verifier)(implicit ec: ExecutionContext) = {
     parse(ser) match {
       case Success(ParseResult(protectedHeaders, signerInput, payload, signature)) =>
         verifier
@@ -126,7 +125,7 @@ object Jws {
   }
 
   def ascii(data: String): Array[Byte] = {
-    StringUtil.getBytesAscii(data)
+    data.getBytes(US_ASCII)
   }
 
   def utf8(data: String): Array[Byte] = {

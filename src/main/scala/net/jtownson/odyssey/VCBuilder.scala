@@ -6,9 +6,9 @@ import java.time.LocalDateTime
 
 import io.circe.{Json, JsonObject}
 import io.circe.syntax._
+import net.jtownson.odyssey.Signer.Es256Signer
 import net.jtownson.odyssey.VCBuilder.VCField
 import net.jtownson.odyssey.VCBuilder.VCField._
-import org.jose4j.jws.AlgorithmIdentifiers
 
 case class VCBuilder[F <: VCField] private[odyssey] (
     additionalTypes: Seq[String] = Seq(),
@@ -17,9 +17,7 @@ case class VCBuilder[F <: VCField] private[odyssey] (
     issuer: Option[URI] = None,
     issuerAttributes: Option[JsonObject] = None,
     subjects: Seq[JsonObject] = Seq.empty,
-    privateKey: Option[PrivateKey] = None,
-    publicKeyRef: Option[URL] = None,
-    signatureAlgo: Option[String] = None,
+    signer: Option[Signer] = None,
     issuanceDate: Option[LocalDateTime] = None,
     expirationDate: Option[LocalDateTime] = None
 ) {
@@ -55,15 +53,15 @@ case class VCBuilder[F <: VCField] private[odyssey] (
     copy(additionalContexts = additionalContexts :+ ctx)
   }
 
-  def withEcdsaSecp256k1Signature2019(
+  def withSigner(signer: Signer): VCBuilder[F with SignatureField] = {
+    copy(signer = Some(signer))
+  }
+
+  def withEs256Signature(
       publicKeyRef: URL,
       privateKey: PrivateKey
   ): VCBuilder[F with SignatureField] = {
-    copy(
-      privateKey = Some(privateKey),
-      publicKeyRef = Some(publicKeyRef),
-      signatureAlgo = Some(AlgorithmIdentifiers.ECDSA_USING_P256_CURVE_AND_SHA256)
-    )
+    withSigner(new Es256Signer(publicKeyRef, privateKey))
   }
 
   private def buildIssuer: Json =
@@ -77,10 +75,9 @@ case class VCBuilder[F <: VCField] private[odyssey] (
   def dataModel(implicit ev: F =:= MandatoryFields): VC =
     VC(id, buildIssuer, issuanceDate.get, expirationDate, additionalTypes, additionalContexts, subjects)
 
-  // TODO introduce JWS abstraction and emit that instead of string
-  def toJws(implicit ev: F =:= MandatoryFields): String = {
+  def toJws(implicit ev: F =:= MandatoryFields) = {
     val vc = VC(id, buildIssuer, issuanceDate.get, expirationDate, additionalTypes, additionalContexts, subjects)
-    VCJwsCodec.encodeJws(privateKey.get, publicKeyRef.get, signatureAlgo.get, vc)
+    VCJwsCodec.toJws(signer.get, vc)
   }
 }
 

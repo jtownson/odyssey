@@ -8,12 +8,11 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 class VCJwsCodecSpec extends FlatSpec {
 
-  "VPJwsCodec" should "parse a generated JWT" in {
-    val jws = TestUtil.aCredential.toJws
+  "VCJwsCodec" should "parse a generated JWT" in {
+    val jwsSer = TestUtil.aCredential.toJws.compactSerializion
 
-    val vc: VC = VC.fromJws(TestUtil.whitelistedAlgos, TestUtil.testKeyResolver, jws).futureValue
+    val vc: VC = VC.fromJwsCompactSer(TestUtil.es256Verifier, jwsSer).futureValue
 
     vc shouldBe TestUtil.aCredential.dataModel
   }
-
 }

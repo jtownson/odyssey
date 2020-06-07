@@ -1,8 +1,6 @@
 package net.jtownson.odyssey
 
-import java.net.{URI, URL}
-import java.time.format.DateTimeFormatter
-import java.time.{LocalDateTime, ZoneId}
+import java.net.URI
 
 import io.circe.Json.obj
 import io.circe._

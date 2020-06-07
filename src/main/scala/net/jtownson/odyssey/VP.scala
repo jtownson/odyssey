@@ -34,10 +34,10 @@ object VP {
     )
   }
 
-  def fromJws(algoWhitelist: Seq[String], publicKeyResolver: PublicKeyResolver, jwsSer: String)(implicit
+  def fromJwsCompactSer(verifier: Verifier, jwsSer: String)(implicit
       ec: ExecutionContext
   ): Future[VP] =
-    VPJwsCodec.decodeJws(algoWhitelist, publicKeyResolver, jwsSer)
+    VPJwsCodec.fromJwsCompactSer(verifier, jwsSer)
 
   def fromJsonLd(jsonLdSer: String): Either[VerificationError, VP] =
     VPJsonCodec.decodeJsonLd(jsonLdSer)

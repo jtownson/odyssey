@@ -43,7 +43,7 @@ class JwsSpec extends FlatSpec {
       .withSigner(hmacSigner)
       .compactSerializion
 
-    val jws = Jws.fromCompactSerialization(compactSer, hmacVerifier).futureValue
+    val jws = Jws.fromCompactSer(compactSer, hmacVerifier).futureValue
 
     jws.protectedHeaders("h") shouldBe "hh".asJson
     jws.protectedHeaders("alg") shouldBe "HS256".asJson
@@ -59,7 +59,7 @@ class JwsSpec extends FlatSpec {
       .withSigner(es256Signer)
       .compactSerializion
 
-    val jws = Jws.fromCompactSerialization(compactSer, es256Verifier).futureValue
+    val jws = Jws.fromCompactSer(compactSer, es256Verifier).futureValue
 
     jws.protectedHeaders("h") shouldBe "hh".asJson
     jws.protectedHeaders("alg") shouldBe "ES256".asJson

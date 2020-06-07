@@ -17,7 +17,7 @@ object Dependencies {
   )
 
   lazy val jose = Seq(
-    "org.bitbucket.b_c" % "jose4j" % "0.7.0"
+    "org.bitbucket.b_c" % "jose4j" % "0.7.0" % Test
   )
 
   lazy val scopt = Seq(

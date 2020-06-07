@@ -6,6 +6,7 @@ import java.time.LocalDate
 
 import io.circe.Printer
 import net.jtownson.odyssey.VerificationAndSigningSketch.{dummyKeyResolver, whitelistedAlgos}
+import net.jtownson.odyssey.Verifier.Es256Verifier
 import org.jose4j.jws.AlgorithmIdentifiers.ECDSA_USING_P256_CURVE_AND_SHA256
 import org.scalatest.FlatSpec
 import org.scalatest.concurrent.ScalaFutures._
@@ -32,19 +33,23 @@ class VerificationAndSigningSketch extends FlatSpec {
       ("jobTitle", "Queen"),
       ("address", "Buckingham Palace, SW1A 1AA")
     )
-    .withEcdsaSecp256k1Signature2019(publicKeyRef, privateKey)
+    .withEs256Signature(publicKeyRef, privateKey)
 
   println(s"The public key reference for verification is $publicKeyRef")
 
   // To send it somewhere else, we will serialize
   // to JWS...
-  val jws: String = vc.toJws
+  val jws: String = vc.toJws.compactSerializion
 
   println("Generated JWS for wire transfer: ")
   println(jws)
 
   // ... somewhere else, another app, another part of the system, we obtain the jws...
-  val parseResult: VC = VC.fromJws(whitelistedAlgos, dummyKeyResolver, jws).futureValue
+  val publicKeyResolver: PublicKeyResolver = (publicKeyRef: URL) =>
+    Future.successful(KeyFoo.getPublicKeyFromRef(publicKeyRef))
+  val verifier = new Es256Verifier(publicKeyResolver)
+
+  val parseResult: VC = VC.fromJwsCompactSer(verifier, jws).futureValue
 
   println(s"Received dataset has a valid signature and decodes to the following dataset:")
   println(VCJsonCodec.vcJsonEncoder(parseResult).printWith(Printer.spaces2))
