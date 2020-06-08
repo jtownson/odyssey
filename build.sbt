@@ -1,5 +1,8 @@
 import Dependencies._
 
+ThisBuild / version := "0.1.4"
+ThisBuild / organization := "net.jtownson"
+ThisBuild / organizationName := "odyssey"
 ThisBuild / scmInfo := Some(
   ScmInfo(
     url("https://github.com/jtownson/odyssey"),
@@ -21,9 +24,6 @@ ThisBuild / publishTo := sonatypePublishToBundle.value
 ThisBuild / publishMavenStyle := true
 
 ThisBuild / scalaVersion := "2.12.10"
-ThisBuild / version := "0.1.3"
-ThisBuild / organization := "net.jtownson"
-ThisBuild / organizationName := "odyssey"
 ThisBuild / scalacOptions := Seq(
   "-Xfatal-warnings",
   "-unchecked",

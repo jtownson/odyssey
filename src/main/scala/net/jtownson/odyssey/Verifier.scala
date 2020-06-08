@@ -8,6 +8,7 @@ import io.circe.syntax._
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 
+import scala.collection.mutable
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
 
@@ -38,7 +39,7 @@ object Verifier {
       shahmac.init(key)
       val expectedSignature = shahmac.doFinal(signerInput)
 
-      Future.successful(expectedSignature.deep == signature.deep)
+      Future.successful(expectedSignature.toSeq == signature.toSeq)
     }
   }
 
