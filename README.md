@@ -79,13 +79,4 @@ vc-test-suite$ npm install && npm test
 ### Project direction
 The first steps for the project will be to fully support the credentials data model.
 
-Once complete, I will provide better support for integrating with self-sovereign identity
-(this integration is currently provided via the `PublicKeyResolver` trait, but the library 
-provides no useful implementations. Namely:
- * a key resolver that works with the universal DID resolver
- * one that supports the DID 'key' method.
- 
-When complete, I will provide support for arbitrary signed content and claims.
-
-At that point, the library should be useful for applications needing DIDComm, DID auth, etc
-and provide a way into these for developers coding in the scala ecosystem. 
+Next steps will be to provide better support for more signature and revocation schemes.
