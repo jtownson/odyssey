@@ -4,10 +4,9 @@ Odyssey is an implementation of the W3C [verifiable credentials data model](http
 It allows you to generate and parse/verify verifiable credentials.
 
 The implementation is currently at an early stage and support is provided for the 'basic' w3c data model tests.
-More to come.
 
-The library will generate and verify credentials provided as JWTs but it does not processes embedded JSON-LD proofs (yet).
-Again, more to come.
+The library will generate and verify credentials using the JWTs signature scheme.
+It does not processes embedded JSON-LD proofs (yet). More to come.
 
 The w3c vc-test-suite is included as a submodule of this project.
 You can run the test suite against odyssey.
@@ -36,38 +35,45 @@ vc-test-suite$ npm install && npm test
   import odyssey._
   import syntax._
 
+  import syntax._
+
   val (publicKeyRef, privateKey): (URL, PrivateKey) = KeyFoo.getKeyPair
 
+  // Build the datamodel
   val vc = VC()
     .withAdditionalType("AddressCredential")
     .withAdditionalContext("https://www.w3.org/2018/credentials/examples/v1")
     .withId("https://www.postoffice.co.uk/addresses/1234")
     .withIssuer("https://www.postoffice.co.uk")
+    .withIssuerAttributes("contact" -> "https://www.postoffice.co.uk/contact-us")
     .withIssuanceDate(LocalDate.of(2020, 1, 1).atStartOfDay())
     .withExpirationDate(LocalDate.of(2021, 1, 1).atStartOfDay())
-    .withCredentialSubject(
-      ("id", "did:ata:abc123"),
-      ("name", "Her Majesty The Queen"),
-      ("jobTitle", "Queen"),
-      ("address", "Buckingham Palace, SW1A 1AA")
+    .withSubjectAttributes(
+      "id" -> "did:ata:abc123",
+      "name" -> "Her Majesty The Queen",
+      "jobTitle" -> "Queen",
+      "address" -> "Buckingham Palace, SW1A 1AA"
     )
-    .withEcdsaSecp256k1Signature2019(publicKeyRef, privateKey)
+    .withEs256Signature(publicKeyRef, privateKey)
 
   println(s"The public key reference for verification is $publicKeyRef")
 
-  // To send it somewhere else, we will serialize
-  // to JWS...
-  val jws: String = vc.toJws
+  // To send it somewhere else, we will serialize to JWS...
+  val jws: String = vc.toJws.compactSerializion
 
   println("Generated JWS for wire transfer: ")
   println(jws)
 
   // ... somewhere else, another app, another part of the system, we obtain the jws...
-  val parseResult: VC = VC.fromJws(whitelistedAlgos, dummyKeyResolver, jws).futureValue
+  val publicKeyResolver: PublicKeyResolver = (publicKeyRef: URL) =>
+    Future.successful(KeyFoo.getPublicKeyFromRef(publicKeyRef))
+  val verifier = new Es256Verifier(publicKeyResolver)
+
+  val parseResult: VCDataModel = VCDataModel.fromJwsCompactSer(verifier, jws).futureValue
 
   println(s"Received dataset has a valid signature and decodes to the following dataset:")
+  import net.jtownson.odyssey.impl.VCJsonCodec
   println(VCJsonCodec.vcJsonEncoder(parseResult).printWith(Printer.spaces2))
-
 ```
 
 ### Project direction
