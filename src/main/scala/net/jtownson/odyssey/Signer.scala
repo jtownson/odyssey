@@ -1,6 +1,6 @@
 package net.jtownson.odyssey
 
-import java.net.URL
+import java.net.URI
 import java.security.{PrivateKey, Signature}
 
 import javax.crypto.Mac
@@ -15,7 +15,7 @@ trait Signer {
 object Signer {
 
   // Example asymmetric signer
-  class Es256Signer(publicKeyRef: URL, privateKey: PrivateKey) extends Signer {
+  class Es256Signer(publicKeyRef: URI, privateKey: PrivateKey) extends Signer {
 
     private val kid = publicKeyRef.toString
 

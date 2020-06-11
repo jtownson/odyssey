@@ -1,6 +1,6 @@
 package net.jtownson.odyssey
 
-import java.net.URL
+import java.net.{URI, URL}
 import java.security.PrivateKey
 import java.time.LocalDate
 import java.util.Base64
@@ -13,13 +13,13 @@ import scala.concurrent.Future
 
 object TestUtil {
 
-  val (publicKeyRef, privateKey): (URL, PrivateKey) = KeyFoo.getKeyPair
+  val (publicKeyRef, privateKey): (URI, PrivateKey) = KeyFoo.getKeyPair
 
   val secret = Base64.getUrlDecoder.decode(
     "AyM1SysPpbyDfgZld3umj1qzKObwVMkoqQ-EstJQLr_T-1qS0gZH75aKtMN3Yj0iPS4hcgUuTwjAzZr1Z9CAow"
   )
 
-  val testKeyResolver: PublicKeyResolver = { (publicKeyRef: URL) =>
+  val testKeyResolver: PublicKeyResolver = { (publicKeyRef: URI) =>
     Future.successful(KeyFoo.getPublicKeyFromRef(publicKeyRef))
   }
 

@@ -1,6 +1,6 @@
 package net.jtownson.odyssey
 
-import java.net.{URI, URL}
+import java.net.URI
 import java.security.PrivateKey
 
 import net.jtownson.odyssey.Signer.Es256Signer
@@ -35,7 +35,7 @@ case class VP[F <: VPField, G <: VCField] private[odyssey] (
   }
 
   def withEs256Signature(
-      publicKeyRef: URL,
+      publicKeyRef: URI,
       privateKey: PrivateKey
   ): VP[F with SignatureField, G] = {
     withSigner(new Es256Signer(publicKeyRef, privateKey))

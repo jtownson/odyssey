@@ -1,6 +1,6 @@
 package net.jtownson.odyssey
 
-import java.net.URL
+import java.net.URI
 import java.security.{PublicKey, Signature}
 
 import io.circe.Json
@@ -8,7 +8,6 @@ import io.circe.syntax._
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 
-import scala.collection.mutable
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
 
@@ -57,7 +56,7 @@ object Verifier {
 
       maybeKidHeader.fold(Future.successful(false)) { kidJson => // verify kid header present
         kidJson.asString.fold(Future.successful(false)) { kid => // verify kid is a JSON string
-          Try(new URL(kid)).fold( // verify kid is a valid URL
+          Try(new URI(kid)).fold( // verify kid is a valid URL
             _ => Future.successful(false),
             kidUrl =>
               publicKeyResolver.resolvePublicKey(kidUrl).map { publicKey => // verify the key resolves

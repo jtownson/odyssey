@@ -1,6 +1,6 @@
 import Dependencies._
 
-ThisBuild / version := "0.1.4"
+ThisBuild / version := "0.1.5"
 ThisBuild / organization := "net.jtownson"
 ThisBuild / organizationName := "odyssey"
 ThisBuild / scmInfo := Some(

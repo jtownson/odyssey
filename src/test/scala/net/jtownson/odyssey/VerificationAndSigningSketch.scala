@@ -1,6 +1,6 @@
 package net.jtownson.odyssey
 
-import java.net.URL
+import java.net.URI
 import java.security.PrivateKey
 import java.time.LocalDate
 
@@ -17,7 +17,7 @@ class VerificationAndSigningSketch extends FlatSpec {
 
   import syntax._
 
-  val (publicKeyRef, privateKey): (URL, PrivateKey) = KeyFoo.getKeyPair
+  val (publicKeyRef, privateKey): (URI, PrivateKey) = KeyFoo.getKeyPair
 
   val vc = VC()
     .withAdditionalType("AddressCredential")
@@ -45,7 +45,7 @@ class VerificationAndSigningSketch extends FlatSpec {
   println(jws)
 
   // ... somewhere else, another app, another part of the system, we obtain the jws...
-  val publicKeyResolver: PublicKeyResolver = (publicKeyRef: URL) =>
+  val publicKeyResolver: PublicKeyResolver = (publicKeyRef: URI) =>
     Future.successful(KeyFoo.getPublicKeyFromRef(publicKeyRef))
   val verifier = new Es256Verifier(publicKeyResolver)
 
@@ -57,7 +57,7 @@ class VerificationAndSigningSketch extends FlatSpec {
 }
 
 object VerificationAndSigningSketch {
-  val dummyKeyResolver: PublicKeyResolver = { (publicKeyRef: URL) =>
+  val dummyKeyResolver: PublicKeyResolver = { (publicKeyRef: URI) =>
     Future.successful(KeyFoo.getPublicKeyFromRef(publicKeyRef))
   }
   val whitelistedAlgos = Seq(ECDSA_USING_P256_CURVE_AND_SHA256)

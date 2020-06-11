@@ -59,7 +59,7 @@ case class VC[F <: VCField] private[odyssey] (
   }
 
   def withEs256Signature(
-      publicKeyRef: URL,
+      publicKeyRef: URI,
       privateKey: PrivateKey
   ): VC[F with SignatureField] = {
     withSigner(new Es256Signer(publicKeyRef, privateKey))
