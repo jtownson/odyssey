@@ -4,9 +4,9 @@ import java.net.URI
 
 import io.circe.Decoder.Result
 import io.circe.{Decoder, DecodingFailure, HCursor, Json}
+import net.jtownson.odyssey.impl.CodecStuff._
 
 import scala.util.Try
-import net.jtownson.odyssey.impl.CodecStuff._
 
 object ContextValidation {
 
@@ -49,12 +49,12 @@ object ContextValidation {
       .map(_ => Seq.empty)
       .toEither
       .left
-      .map(_ =>
-        DecodingFailure(
-          "A @context value, when a string, must equal 'https://www.w3.org/2018/credentials/v1'",
-          List()
-        )
-      )
+      .map(
+        _ =>
+          DecodingFailure(
+            "A @context value, when a string, must equal 'https://www.w3.org/2018/credentials/v1'",
+            List()
+        ))
   }
 
   private def validatedHead(expected: URI, h: Json): Either[DecodingFailure, Seq[URI]] = {

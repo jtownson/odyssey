@@ -3,8 +3,8 @@ package net.jtownson.odyssey
 import java.nio.charset.StandardCharsets.{US_ASCII, UTF_8}
 import java.util.Base64
 
-import io.circe.syntax._
 import io.circe._
+import io.circe.syntax._
 import net.jtownson.odyssey.Jws.JwsField.{EmptyField, SignatureField}
 import net.jtownson.odyssey.Jws.{JwsField, MandatoryFields, utf8}
 import net.jtownson.odyssey.VerificationError.InvalidSignature
@@ -67,9 +67,9 @@ case class Jws[F <: JwsField] private[odyssey] (
     copy(signature = Some(signature))
   }
 
-  def compactSerializion(implicit ev: F =:= MandatoryFields): String = {
+  def compactSerializion(implicit ev: F =:= MandatoryFields, ec: ExecutionContext): Future[String] = {
     if (signature.isDefined) {
-      Jws.compactSerialization(utf8ProtectedHeader, payload, signature.get)
+      Future.successful(Jws.compactSerialization(utf8ProtectedHeader, payload, signature.get))
     } else {
       Jws.compactSerialization(utf8ProtectedHeader, payload, signer.get)
     }
@@ -137,7 +137,7 @@ object Jws {
     ascii(s"${base64Url(utf8ProtectedHeader)}.${base64Url(payload)}")
   }
 
-  def sign(utf8ProtectedHeader: Array[Byte], payload: Array[Byte], signer: Signer): Array[Byte] = {
+  def sign(utf8ProtectedHeader: Array[Byte], payload: Array[Byte], signer: Signer): Future[Array[Byte]] = {
     signer.sign(signingInput(utf8ProtectedHeader, payload))
   }
 
@@ -145,10 +145,10 @@ object Jws {
       utf8ProtectedHeader: Array[Byte],
       payload: Array[Byte],
       signingDevice: Signer
-  ): String = {
-    val signature = sign(utf8ProtectedHeader, payload, signingDevice)
-    compactSerialization(utf8ProtectedHeader, payload, signature)
-  }
+  )(implicit ec: ExecutionContext): Future[String] =
+    for {
+      signature <- sign(utf8ProtectedHeader, payload, signingDevice)
+    } yield compactSerialization(utf8ProtectedHeader, payload, signature)
 
   def compactSerialization(
       utf8ProtectedHeader: Array[Byte],

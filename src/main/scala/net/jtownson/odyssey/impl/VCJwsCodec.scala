@@ -19,15 +19,14 @@ object VCJwsCodec {
       .withSigner(signer)
   }
 
-  def fromJwsCompactSer(verifier: Verifier, jwsCompactSer: String)(implicit
-      ec: ExecutionContext
-  ): Future[VCDataModel] = {
+  def fromJwsCompactSer(verifier: Verifier, jwsCompactSer: String)(
+      implicit
+      ec: ExecutionContext): Future[VCDataModel] = {
     Jws.fromCompactSer(jwsCompactSer, verifier).flatMap { jws =>
       jws.protectedHeaders
         .get("vc")
         .fold(Future.failed[VCDataModel](ParseError("Missing vc header in JWS")))(vcJson =>
-          toFuture(VCJsonCodec.vcJsonDecoder(vcJson.hcursor))
-        )
+          toFuture(VCJsonCodec.vcJsonDecoder(vcJson.hcursor)))
     }
   }
 

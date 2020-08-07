@@ -5,7 +5,6 @@ import java.net.URI.create
 import java.time.LocalDateTime
 
 import io.circe.{Json, JsonObject}
-import net.jtownson.odyssey.VC.VCField.EmptyField
 import net.jtownson.odyssey.impl.{VCJsonCodec, VCJwsCodec}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -52,9 +51,9 @@ object VCDataModel {
     )
   }
 
-  def fromJwsCompactSer(verifier: Verifier, jwsSer: String)(implicit
-      ec: ExecutionContext
-  ): Future[VCDataModel] =
+  def fromJwsCompactSer(verifier: Verifier, jwsSer: String)(
+      implicit
+      ec: ExecutionContext): Future[VCDataModel] =
     VCJwsCodec.fromJwsCompactSer(verifier, jwsSer)
 
   def fromJsonLd(jsonLdSer: String): Either[VerificationError, VCDataModel] =

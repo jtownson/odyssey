@@ -1,11 +1,11 @@
 package net.jtownson.odyssey
 
-import java.net.{URI, URL}
+import java.net.URI
 import java.security.PrivateKey
 import java.time.LocalDateTime
 
-import io.circe.{Json, JsonObject}
 import io.circe.syntax._
+import io.circe.{Json, JsonObject}
 import net.jtownson.odyssey.Signer.Es256Signer
 import net.jtownson.odyssey.VC.VCField
 import net.jtownson.odyssey.VC.VCField._

@@ -1,14 +1,15 @@
 package net.jtownson.odyssey
 
-import java.net.{URI, URL}
+import java.net.URI
 import java.security.PrivateKey
 import java.time.LocalDate
 import java.util.Base64
 
 import net.jtownson.odyssey.Signer.{Es256Signer, HmacSha256Signer}
 import net.jtownson.odyssey.Verifier.{Es256Verifier, HmacSha256Verifier}
-import syntax._
+import net.jtownson.odyssey.syntax._
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 object TestUtil {

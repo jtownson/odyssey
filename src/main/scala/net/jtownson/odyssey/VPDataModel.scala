@@ -32,9 +32,9 @@ object VPDataModel {
     )
   }
 
-  def fromJwsCompactSer(verifier: Verifier, jwsSer: String)(implicit
-      ec: ExecutionContext
-  ): Future[VPDataModel] =
+  def fromJwsCompactSer(verifier: Verifier, jwsSer: String)(
+      implicit
+      ec: ExecutionContext): Future[VPDataModel] =
     VPJwsCodec.fromJwsCompactSer(verifier, jwsSer)
 
   def fromJsonLd(jsonLdSer: String): Either[VerificationError, VPDataModel] =

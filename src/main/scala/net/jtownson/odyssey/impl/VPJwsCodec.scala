@@ -23,8 +23,7 @@ object VPJwsCodec {
       jws.protectedHeaders
         .get("vp")
         .fold(Future.failed[VPDataModel](ParseError("Missing vp header in JWS")))(vpJson =>
-          toFuture(VPJsonCodec.vpJsonDecoder(vpJson.hcursor))
-        )
+          toFuture(VPJsonCodec.vpJsonDecoder(vpJson.hcursor)))
     }
   }
 

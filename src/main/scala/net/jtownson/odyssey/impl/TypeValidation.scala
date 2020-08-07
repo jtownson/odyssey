@@ -19,21 +19,21 @@ object TypeValidation {
               s"A JSON boolean is not a valid type definition. Require an array [$expected, ...].",
               hc.history
             )
-          ),
+        ),
         jsonNumber = _ =>
           Left(
             DecodingFailure(
               s"A JSON number is not a valid type definition. Require an array [$expected, ...].",
               hc.history
             )
-          ),
+        ),
         jsonString = _ =>
           Left(
             DecodingFailure(
               s"A JSON string is not a valid type definition. Require an array [$expected, ...].",
               hc.history
             )
-          ),
+        ),
         jsonArray = (s: Seq[Json]) => decodeTypeAsArray(expected, s),
         jsonObject = _ => Left(DecodingFailure("object is not a valid type definition", hc.history))
       )
