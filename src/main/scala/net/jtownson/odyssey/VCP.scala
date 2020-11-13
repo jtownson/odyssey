@@ -2,6 +2,7 @@ package net.jtownson.odyssey
 import java.io.File
 
 import net.jtownson.odyssey.impl.Using
+import net.jtownson.odyssey.impl.VPJsonCodec.vpJsonEncoder
 import scopt.OParser
 
 import scala.io.Source
@@ -12,6 +13,9 @@ import scala.io.Source
   * and echo those that it considers valid, or print an error.
   */
 object VCP extends App {
+
+  import io.circe._
+  import net.jtownson.odyssey.impl.VCJsonCodec._
 
   val builder = OParser.builder[Config]
   import builder._
@@ -31,6 +35,7 @@ object VCP extends App {
       failure("Invalid type. Must be either VerifiableCredential or VerifiablePresentation.")
   }
 
+
   OParser.parse(parser, args, Config()).foreach { config: Config =>
     config.file.foreach { file =>
       Using(Source.fromFile(file, "UTF-8"))(_.mkString).foreach { jsonLd =>
@@ -38,15 +43,15 @@ object VCP extends App {
           VCDataModel.fromJsonLd(jsonLd) match {
             case Left(err) =>
               System.err.println(s"Error processing verifiable credential: ${err.getMessage}")
-            case Right(_) =>
-              print(jsonLd)
+            case Right(vc) =>
+              print(Printer.spaces2.print(vcJsonEncoder(vc)))
           }
         } else {
           VPDataModel.fromJsonLd(jsonLd) match {
             case Left(err) =>
               System.err.println(s"Error processing verifiable presentation: ${err.getMessage}.")
             case Right(vp) =>
-              println(jsonLd)
+              println(Printer.spaces2.print(vpJsonEncoder(vp)))
           }
         }
       }
