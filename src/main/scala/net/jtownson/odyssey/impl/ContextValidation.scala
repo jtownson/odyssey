@@ -4,9 +4,9 @@ import java.net.URI
 
 import io.circe.Decoder.Result
 import io.circe.{Decoder, DecodingFailure, HCursor, Json}
+import net.jtownson.odyssey.impl.CodecStuff._
 
 import scala.util.Try
-import net.jtownson.odyssey.impl.CodecStuff._
 
 object ContextValidation {
 

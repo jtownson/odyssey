@@ -23,7 +23,7 @@ ThisBuild / pomIncludeRepository := { _ => false }
 ThisBuild / publishTo := sonatypePublishToBundle.value
 ThisBuild / publishMavenStyle := true
 
-ThisBuild / scalaVersion := "2.12.10"
+//ThisBuild / scalaVersion := "2.12.10"
 ThisBuild / scalacOptions := Seq(
   "-Xfatal-warnings",
   "-unchecked",

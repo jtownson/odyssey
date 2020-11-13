@@ -21,12 +21,13 @@ object Signer {
 
     private val kid = publicKeyRef.toString
 
-    override def sign(data: Array[Byte]): Future[Array[Byte]] = Future.successful {
-      val ecdsa: Signature = Signature.getInstance("SHA256withECDSA")
-      ecdsa.initSign(privateKey)
-      ecdsa.update(data)
-      ecdsa.sign()
-    }
+    override def sign(data: Array[Byte]): Future[Array[Byte]] =
+      Future.successful {
+        val ecdsa: Signature = Signature.getInstance("SHA256withECDSA")
+        ecdsa.initSign(privateKey)
+        ecdsa.update(data)
+        ecdsa.sign()
+      }
 
     override def setHeaderParameters[F <: JwsField](jws: Jws[F]): Jws[F] = {
       jws
@@ -40,11 +41,12 @@ object Signer {
 
     private val key = new SecretKeySpec(secret, "HmacSHA256")
 
-    override def sign(data: Array[Byte]): Future[Array[Byte]] = Future.successful {
-      val shahmac: Mac = Mac.getInstance("HmacSHA256")
-      shahmac.init(key)
-      shahmac.doFinal(data)
-    }
+    override def sign(data: Array[Byte]): Future[Array[Byte]] =
+      Future.successful {
+        val shahmac: Mac = Mac.getInstance("HmacSHA256")
+        shahmac.init(key)
+        shahmac.doFinal(data)
+      }
 
     override def setHeaderParameters[F <: JwsField](jws: Jws[F]): Jws[F] = {
       jws.withHeader("alg", "HS256")

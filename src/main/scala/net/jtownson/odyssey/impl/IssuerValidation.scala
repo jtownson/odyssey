@@ -3,10 +3,9 @@ package net.jtownson.odyssey.impl
 import java.net.URI
 
 import io.circe._
+import io.circe.syntax._
 
 import scala.util.Try
-import io.circe.syntax._
-import net.jtownson.odyssey.impl.CodecStuff._
 
 object IssuerValidation {
 

@@ -6,7 +6,7 @@ It allows you to generate and parse/verify verifiable credentials.
 The implementation is currently at an early stage and support is provided for the 'basic' w3c data model tests.
 
 The library will generate and verify credentials using the JWTs signature scheme.
-It does not processes embedded JSON-LD proofs (yet). More to come.
+It does not process embedded JSON-LD proofs (yet). More to come.
 
 The w3c vc-test-suite is included as a submodule of this project.
 You can run the test suite against odyssey.
