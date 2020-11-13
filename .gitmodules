@@ -1,3 +1,4 @@
 [submodule "w3c/vc-test-suite"]
 	path = w3c/vc-test-suite
 	url = git@github.com:w3c/vc-test-suite.git
+	branch = gh-pages
