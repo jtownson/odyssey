@@ -10,6 +10,7 @@ import net.jtownson.odyssey.Verifier.{Es256Verifier, HmacSha256Verifier}
 import syntax._
 
 import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits.global
 
 object TestUtil {
 

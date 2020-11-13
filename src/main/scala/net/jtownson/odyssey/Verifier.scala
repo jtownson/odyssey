@@ -13,9 +13,7 @@ import scala.util.Try
 
 trait Verifier {
   def supportedAlgs: Seq[String]
-  def verify(protectedHeaders: Map[String, Json], signerInput: Array[Byte], signature: Array[Byte])(implicit
-      ec: ExecutionContext
-  ): Future[Boolean]
+  def verify(protectedHeaders: Map[String, Json], signerInput: Array[Byte], signature: Array[Byte]): Future[Boolean]
 }
 
 object Verifier {
@@ -31,7 +29,7 @@ object Verifier {
         protectedHeaders: Map[String, Json],
         signerInput: Array[Byte],
         signature: Array[Byte]
-    )(implicit ec: ExecutionContext): Future[Boolean] = {
+    ): Future[Boolean] = {
       assert(protectedHeaders.get("alg").contains("HS256".asJson))
 
       val shahmac: Mac = Mac.getInstance("HmacSHA256")
@@ -43,12 +41,14 @@ object Verifier {
   }
 
   // example asymmetric verifier
-  class Es256Verifier(publicKeyResolver: PublicKeyResolver) extends Verifier {
+  class Es256Verifier(publicKeyResolver: PublicKeyResolver)(implicit ec: ExecutionContext) extends Verifier {
     import io.circe.syntax._
     override def supportedAlgs: Seq[String] = Seq("ES256")
 
-    override def verify(protectedHeaders: Map[String, Json], signerInput: Array[Byte], signature: Array[Byte])(implicit
-        ec: ExecutionContext
+    override def verify(
+        protectedHeaders: Map[String, Json],
+        signerInput: Array[Byte],
+        signature: Array[Byte]
     ): Future[Boolean] = {
       assert(protectedHeaders.get("alg").contains("ES256".asJson)) // check for correct alg header
 

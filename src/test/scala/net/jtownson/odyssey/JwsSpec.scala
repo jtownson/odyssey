@@ -24,6 +24,7 @@ class JwsSpec extends FlatSpec {
       .withJsonPayload(Json.obj("key" -> "value".asJson))
       .withSigner(hmacSigner)
       .compactSerializion
+      .futureValue
 
     val jose4jJws = new JsonWebSignature()
     jose4jJws.setCompactSerialization(jws)
@@ -42,12 +43,13 @@ class JwsSpec extends FlatSpec {
       .withJsonPayload(payload)
       .withSigner(hmacSigner)
       .compactSerializion
+      .futureValue
 
     val jws = Jws.fromCompactSer(compactSer, hmacVerifier).futureValue
 
     jws.protectedHeaders("h") shouldBe "hh".asJson
     jws.protectedHeaders("alg") shouldBe "HS256".asJson
-    jws.payload.deep shouldBe payload.printWith(Printer.noSpaces).getBytes(UTF_8).deep
+    jws.payload.toSeq shouldBe payload.printWith(Printer.noSpaces).getBytes(UTF_8).toSeq
   }
 
   it should "serialize and deserialize a JWS using an ES256 sig" in {
@@ -58,12 +60,13 @@ class JwsSpec extends FlatSpec {
       .withJsonPayload(payload)
       .withSigner(es256Signer)
       .compactSerializion
+      .futureValue
 
     val jws = Jws.fromCompactSer(compactSer, es256Verifier).futureValue
 
     jws.protectedHeaders("h") shouldBe "hh".asJson
     jws.protectedHeaders("alg") shouldBe "ES256".asJson
-    jws.payload.deep shouldBe payload.printWith(Printer.noSpaces).getBytes(UTF_8).deep
+    jws.payload.toSeq shouldBe payload.printWith(Printer.noSpaces).getBytes(UTF_8).toSeq
   }
 
   it should "be consistent with the example at https://tools.ietf.org/html/rfc7515#appendix-A.1" in {
@@ -80,14 +83,14 @@ class JwsSpec extends FlatSpec {
       payload
     ) shouldBe "eyJpc3MiOiJqb2UiLA0KICJleHAiOjEzMDA4MTkzODAsDQogImh0dHA6Ly9leGFtcGxlLmNvbS9pc19yb290Ijp0cnVlfQ"
 
-    Jws.signingInput(protectedHeader, payload).deep shouldBe Array[Byte](101, 121, 74, 48, 101, 88, 65, 105, 79, 105,
+    Jws.signingInput(protectedHeader, payload).toSeq shouldBe Array[Byte](101, 121, 74, 48, 101, 88, 65, 105, 79, 105,
       74, 75, 86, 49, 81, 105, 76, 65, 48, 75, 73, 67, 74, 104, 98, 71, 99, 105, 79, 105, 74, 73, 85, 122, 73, 49, 78,
       105, 74, 57, 46, 101, 121, 74, 112, 99, 51, 77, 105, 79, 105, 74, 113, 98, 50, 85, 105, 76, 65, 48, 75, 73, 67,
       74, 108, 101, 72, 65, 105, 79, 106, 69, 122, 77, 68, 65, 52, 77, 84, 107, 122, 79, 68, 65, 115, 68, 81, 111, 103,
       73, 109, 104, 48, 100, 72, 65, 54, 76, 121, 57, 108, 101, 71, 70, 116, 99, 71, 120, 108, 76, 109, 78, 118, 98, 83,
-      57, 112, 99, 49, 57, 121, 98, 50, 57, 48, 73, 106, 112, 48, 99, 110, 86, 108, 102, 81).deep
+      57, 112, 99, 49, 57, 121, 98, 50, 57, 48, 73, 106, 112, 48, 99, 110, 86, 108, 102, 81).toSeq
 
-    hmacSigner.sign(Jws.signingInput(protectedHeader, payload)).deep shouldBe
+    hmacSigner.sign(Jws.signingInput(protectedHeader, payload)).futureValue.toSeq shouldBe
       Array[Byte](
         116,
         24,
@@ -121,9 +124,9 @@ class JwsSpec extends FlatSpec {
         132.toByte,
         141.toByte,
         121
-      ).deep
+      ).toSeq
 
-    Jws.sign(protectedHeader, payload, hmacSigner).deep shouldBe Array[Byte](
+    Jws.sign(protectedHeader, payload, hmacSigner).futureValue.toSeq shouldBe Array[Byte](
       116,
       24,
       223.toByte,
@@ -156,13 +159,13 @@ class JwsSpec extends FlatSpec {
       132.toByte,
       141.toByte,
       121
-    ).deep
+    ).toSeq
 
     Jws.compactSerialization(
       protectedHeader,
       payload,
       hmacSigner
-    ) shouldBe "eyJ0eXAiOiJKV1QiLA0KICJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJqb2UiLA0KICJleHAiOjEzMDA4MTkzODAsDQogImh0dHA6Ly9leGFtcGxlLmNvbS9pc19yb290Ijp0cnVlfQ.dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"
+    ).futureValue shouldBe "eyJ0eXAiOiJKV1QiLA0KICJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJqb2UiLA0KICJleHAiOjEzMDA4MTkzODAsDQogImh0dHA6Ly9leGFtcGxlLmNvbS9pc19yb290Ijp0cnVlfQ.dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"
   }
 }
 

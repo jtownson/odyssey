@@ -14,7 +14,7 @@ import scala.io.Source
 object KeyFoo {
 
   def getKeyPair: (URI, PrivateKey) = {
-    val keyFile = Paths.get("id_ecdsa.pem").toFile
+    val keyFile = Paths.get("src/test/resources/id_ecdsa.pem").toFile
     val publicKeyURI = keyFile.toURI
 
     (publicKeyURI, getKeyPair(keyFile).getPrivate)

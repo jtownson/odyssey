@@ -39,7 +39,7 @@ class VerificationAndSigningSketch extends FlatSpec {
 
   // To send it somewhere else, we will serialize
   // to JWS...
-  val jws: String = vc.toJws.compactSerializion
+  val jws: String = vc.toJws.compactSerializion.futureValue
 
   println("Generated JWS for wire transfer: ")
   println(jws)

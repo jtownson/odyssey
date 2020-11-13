@@ -67,9 +67,9 @@ case class Jws[F <: JwsField] private[odyssey] (
     copy(signature = Some(signature))
   }
 
-  def compactSerializion(implicit ev: F =:= MandatoryFields): String = {
+  def compactSerializion(implicit ev: F =:= MandatoryFields, ec: ExecutionContext): Future[String] = {
     if (signature.isDefined) {
-      Jws.compactSerialization(utf8ProtectedHeader, payload, signature.get)
+      Future.successful(Jws.compactSerialization(utf8ProtectedHeader, payload, signature.get))
     } else {
       Jws.compactSerialization(utf8ProtectedHeader, payload, signer.get)
     }
@@ -137,7 +137,7 @@ object Jws {
     ascii(s"${base64Url(utf8ProtectedHeader)}.${base64Url(payload)}")
   }
 
-  def sign(utf8ProtectedHeader: Array[Byte], payload: Array[Byte], signer: Signer): Array[Byte] = {
+  def sign(utf8ProtectedHeader: Array[Byte], payload: Array[Byte], signer: Signer): Future[Array[Byte]] = {
     signer.sign(signingInput(utf8ProtectedHeader, payload))
   }
 
@@ -145,9 +145,8 @@ object Jws {
       utf8ProtectedHeader: Array[Byte],
       payload: Array[Byte],
       signingDevice: Signer
-  ): String = {
-    val signature = sign(utf8ProtectedHeader, payload, signingDevice)
-    compactSerialization(utf8ProtectedHeader, payload, signature)
+  )(implicit ec: ExecutionContext): Future[String] = {
+    sign(utf8ProtectedHeader, payload, signingDevice).map(signature => compactSerialization(utf8ProtectedHeader, payload, signature))
   }
 
   def compactSerialization(
@@ -169,28 +168,31 @@ object Jws {
   )
 
   def parse(compactSer: String): Try[ParseResult] = {
-    val parts = compactSer.split('.')
-    if (parts.length != 3) {
-      Failure(new IllegalArgumentException(s"Expect three parts in JWS compact serialization. Got ${parts.length}"))
-    } else {
-      val (headerEnc, payloadEnc, sigEnc) = (parts(0), parts(1), parts(2))
-      val headerDec = new String(Base64.getUrlDecoder.decode(headerEnc), UTF_8)
-      val headerParseResult: Either[ParsingFailure, Json] = io.circe.parser.parse(headerDec)
+    Try {
+      val parts = compactSer.split('.')
 
-      val signerInput = ascii(compactSer.substring(0, compactSer.lastIndexOf('.')))
+      if (parts.length != 3) {
+        Left(new IllegalArgumentException(s"Expect three parts in JWS compact serialization. Got ${parts.length}"))
+      } else {
+        val (headerEnc, payloadEnc, sigEnc) = (parts(0), parts(1), parts(2))
+        val headerDec = new String(Base64.getUrlDecoder.decode(headerEnc), UTF_8)
+        val headerParseResult: Either[ParsingFailure, Json] = io.circe.parser.parse(headerDec)
 
-      val payloadDec = Base64.getUrlDecoder.decode(payloadEnc)
-      val sigDec = Base64.getUrlDecoder.decode(sigEnc)
+        val signerInput = ascii(compactSer.substring(0, compactSer.lastIndexOf('.')))
 
-      val parseResult = headerParseResult.flatMap { headerJson: Json =>
-        if (!headerJson.isObject) {
-          Left(DecodingFailure(s"JWS header is not a valid JSON object: $headerDec", List.empty))
-        } else {
-          headerJson.as[JsonObject].map(headerObj => ParseResult(headerObj.toMap, signerInput, payloadDec, sigDec))
+        val payloadDec = Base64.getUrlDecoder.decode(payloadEnc)
+        val sigDec = Base64.getUrlDecoder.decode(sigEnc)
+
+        val parseResult: Either[Error, ParseResult] = headerParseResult.flatMap { headerJson: Json =>
+          if (!headerJson.isObject) {
+            Left(DecodingFailure(s"JWS header is not a valid JSON object: $headerDec", List.empty))
+          } else {
+            headerJson.as[JsonObject].map(headerObj => ParseResult(headerObj.toMap, signerInput, payloadDec, sigDec))
+          }
         }
-      }
 
-      parseResult.toTry
-    }
+        parseResult
+      }
+    }.flatMap(_.toTry)
   }
 }
