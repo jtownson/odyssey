@@ -9,37 +9,15 @@ The library will generate and verify credentials using the JWTs signature scheme
 It does not process embedded JSON-LD proofs (yet). More to come.
 
 The w3c vc-test-suite is included as a submodule of this project.
-You can run the test suite against odyssey.
-Firstly, create a config.json file under w3c/vc-test-suite (as described in the readme there). Set the following two
-entries in that config:
-```json
-{
-   "generator": "../../vc.sh",
-   "presentationGenerator": "../../vp.sh",
-   // other config...
-}
-```
-Now build the odyssey jar file, which `vc.sh` will execute:
-```shell script
-odyssey$ sbt assembly
-```
-Finally, cd to the test suite directory and run the tests
-```shell script
-odyssey$ cd w3c/vc-test-suite
-vc-test-suite$ npm install && npm test 
-```
+You can run the test suite against odyssey using the command `sbt vctest`.
 
 ### Example usage
 ```scala
-
   import odyssey._
   import syntax._
 
-  import syntax._
+  val (publicKeyRef, privateKey): (URI, PrivateKey) = KeyFoo.getKeyPair
 
-  val (publicKeyRef, privateKey): (URL, PrivateKey) = KeyFoo.getKeyPair
-
-  // Build the datamodel
   val vc = VC()
     .withAdditionalType("AddressCredential")
     .withAdditionalContext("https://www.w3.org/2018/credentials/examples/v1")
@@ -58,14 +36,15 @@ vc-test-suite$ npm install && npm test
 
   println(s"The public key reference for verification is $publicKeyRef")
 
-  // To send it somewhere else, we will serialize to JWS...
-  val jws: String = vc.toJws.compactSerializion
+  // To send it somewhere else, we will serialize
+  // to JWS...
+  val jws: String = vc.toJws.compactSerializion.futureValue
 
   println("Generated JWS for wire transfer: ")
   println(jws)
 
   // ... somewhere else, another app, another part of the system, we obtain the jws...
-  val publicKeyResolver: PublicKeyResolver = (publicKeyRef: URL) =>
+  val publicKeyResolver: PublicKeyResolver = (publicKeyRef: URI) =>
     Future.successful(KeyFoo.getPublicKeyFromRef(publicKeyRef))
   val verifier = new Es256Verifier(publicKeyResolver)
 
