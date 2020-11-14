@@ -35,7 +35,6 @@ object VCP extends App {
       failure("Invalid type. Must be either VerifiableCredential or VerifiablePresentation.")
   }
 
-
   OParser.parse(parser, args, Config()).foreach { config: Config =>
     config.file.foreach { file =>
       Using(Source.fromFile(file, "UTF-8"))(_.mkString).foreach { jsonLd =>

@@ -9,11 +9,12 @@ import io.circe.{Json, JsonObject}
 import net.jtownson.odyssey.Signer.Es256Signer
 import net.jtownson.odyssey.VC.VCField
 import net.jtownson.odyssey.VC.VCField._
+import net.jtownson.odyssey.impl.CodecStuff.uriEncoder
 import net.jtownson.odyssey.impl.VCJwsCodec
 
 case class VC[F <: VCField] private[odyssey] (
     additionalTypes: Seq[String] = Seq(),
-    additionalContexts: Seq[URI] = Seq(),
+    additionalContexts: Seq[Json] = Seq(),
     id: Option[String] = None,
     issuer: Option[URI] = None,
     issuerAttributes: Option[JsonObject] = None,
@@ -51,7 +52,7 @@ case class VC[F <: VCField] private[odyssey] (
   }
 
   def withAdditionalContext(ctx: URI): VC[F] = {
-    copy(additionalContexts = additionalContexts :+ ctx)
+    copy(additionalContexts = additionalContexts :+ ctx.asJson(uriEncoder))
   }
 
   def withSigner(signer: Signer): VC[F with SignatureField] = {

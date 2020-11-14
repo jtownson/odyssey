@@ -3,14 +3,15 @@ package net.jtownson.odyssey.impl
 import java.net.URI
 
 import io.circe.Decoder.Result
-import io.circe.{Decoder, DecodingFailure, HCursor, Json}
+import io.circe.syntax._
+import io.circe.{Decoder, DecodingFailure, HCursor, Json, JsonObject}
 import net.jtownson.odyssey.impl.CodecStuff._
 
 import scala.util.Try
 
 object ContextValidation {
 
-  def contextDecoder: Decoder[Seq[URI]] =
+  def contextDecoder: Decoder[Seq[Json]] =
     (hc: HCursor) => {
       hc.value.fold(
         jsonNull = Left(DecodingFailure("null is r r r wrong", hc.history)),
@@ -25,7 +26,11 @@ object ContextValidation {
       )
     }
 
-  private def decodeContextAsArray(s: Seq[Json]): Result[Seq[URI]] = {
+  private def decodeContextAsObject(o: JsonObject): Result[Seq[Json]] = {
+    Right(Seq(o.asJson))
+  }
+
+  private def decodeContextAsArray(s: Seq[Json]): Result[Seq[Json]] = {
     if (s.isEmpty) {
       Left(DecodingFailure("A @context when an array, cannot be empty.", List()))
     } else if (s.length == 1) {
@@ -43,7 +48,7 @@ object ContextValidation {
     }
   }
 
-  private def decodeContextAsString(s: String): Decoder.Result[Seq[URI]] = {
+  private def decodeContextAsString(s: String): Result[Seq[Json]] = {
     Try(new URI(s))
       .filter(_.toString == "https://www.w3.org/2018/credentials/v1")
       .map(_ => Seq.empty)
@@ -68,15 +73,23 @@ object ContextValidation {
     } yield headValid
   }
 
-  private def validatedTail(s: Seq[Json]): Either[DecodingFailure, Seq[URI]] = {
+  private def unvalidatedHead(s: Json): Either[DecodingFailure, Seq[Json]] = {
+    if (s.isString)
+      s.as[URI].map(uri => Seq(uri.asJson))
+    else if (s.isObject)
+      Right(Seq(s))
+    else
+      Right(Seq.empty)
+  }
+
+  private def validatedTail(s: Seq[Json]): Either[DecodingFailure, Seq[Json]] = {
     if (s.isEmpty) {
       Right(Seq.empty)
     } else {
       for {
-        head <- if (s.head.isString) s.head.as[URI].map(Seq(_)) else Right(Seq.empty)
+        head <- unvalidatedHead(s.head)
         tail <- validatedTail(s.tail)
       } yield head ++ tail
     }
   }
-
 }

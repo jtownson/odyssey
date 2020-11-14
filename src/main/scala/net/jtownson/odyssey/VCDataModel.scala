@@ -15,8 +15,9 @@ case class VCDataModel private (
     issuanceDate: LocalDateTime,
     expirationDate: Option[LocalDateTime],
     types: Seq[String],
-    contexts: Seq[URI],
-    subjects: Seq[JsonObject]
+    contexts: Seq[Json],
+    subjects: Seq[JsonObject],
+    dummy: Option[String]
 )
 
 /**
@@ -37,17 +38,20 @@ object VCDataModel {
       issuanceDate: LocalDateTime,
       expirationDate: Option[LocalDateTime],
       additionalTypes: Seq[String] = Seq.empty,
-      additionalContexts: Seq[URI] = Seq.empty,
+      additionalContexts: Seq[Json] = Seq.empty,
       subjects: Seq[JsonObject]
   ): VCDataModel = {
+    import impl.CodecStuff._
+    import io.circe.syntax._
     new VCDataModel(
       id,
       issuer,
       issuanceDate,
       expirationDate,
       "VerifiableCredential" +: additionalTypes,
-      create("https://www.w3.org/2018/credentials/v1") +: additionalContexts,
-      subjects
+      create("https://www.w3.org/2018/credentials/v1").asJson +: additionalContexts.map(_.asJson),
+      subjects,
+      None
     )
   }
 

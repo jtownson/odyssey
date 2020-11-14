@@ -43,7 +43,7 @@ object VPJsonCodec {
       for {
         id <- hc.downField("id").as[Option[String]]
         types <- hc.downField("type").as[Seq[String]](typeDecoder("VerifiablePresentation"))
-        contexts <- hc.downField("@context").as[Seq[URI]](contextDecoder)
+        contexts <- hc.downField("@context").as[Seq[Json]](contextDecoder)
         vc <- hc.downField("verifiableCredential").as[Seq[VCDataModel]]
         holder <- hc.downField("holder").as[Option[URI]]
         _ <- hc.downField("proof").as[Json]

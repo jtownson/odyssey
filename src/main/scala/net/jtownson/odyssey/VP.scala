@@ -3,23 +3,26 @@ package net.jtownson.odyssey
 import java.net.URI
 import java.security.PrivateKey
 
+import io.circe.Json
+import io.circe.syntax.EncoderOps
 import net.jtownson.odyssey.Signer.Es256Signer
 import net.jtownson.odyssey.VC.VCField
 import net.jtownson.odyssey.VP.VPField
 import net.jtownson.odyssey.VP.VPField.{EmptyField, MandatoryFields, SignatureField}
+import net.jtownson.odyssey.impl.CodecStuff.uriEncoder
 import net.jtownson.odyssey.impl.VPJwsCodec
 
 case class VP[F <: VPField, G <: VCField] private[odyssey] (
     id: Option[String] = None,
     holder: Option[URI] = None,
     additionalTypes: Seq[String] = Seq(),
-    additionalContexts: Seq[URI] = Seq(),
+    additionalContexts: Seq[Json] = Seq(),
     signer: Option[Signer] = None,
     vc: Option[VC[G]] = None
 ) {
 
   def withAdditionalContext(ctx: URI): VP[F, G] = {
-    copy(additionalContexts = additionalContexts :+ ctx)
+    copy(additionalContexts = additionalContexts :+ ctx.asJson(uriEncoder))
   }
 
   def withId(id: String): VP[F, G] = {

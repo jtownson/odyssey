@@ -1,6 +1,5 @@
 package net.jtownson.odyssey.impl
 
-import java.net.URI
 import java.time.LocalDateTime
 
 import io.circe.Json.obj
@@ -43,7 +42,7 @@ object VCJsonCodec {
       for {
         id <- hc.downField("id").as[Option[String]]
         types <- hc.downField("type").as[Seq[String]](typeDecoder("VerifiableCredential"))
-        contexts <- hc.downField("@context").as[Seq[URI]](contextDecoder)
+        contexts <- hc.downField("@context").as[Seq[Json]](contextDecoder)
         issuer <- hc.downField("issuer").as[Json](issuerDecoder)
         issuanceDate <- hc.downField("issuanceDate").as[LocalDateTime]
         expirationDate <- hc.downField("expirationDate").as[Option[LocalDateTime]]
