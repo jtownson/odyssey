@@ -5,20 +5,20 @@
 
    "generatorOptions":"",
 
-   "sectionsNotSupported": ["refresh", "evidence", "status", "tou", "ldp", "jwt", "zkp"],
+   "sectionsNotSupported": ["refresh", "evidence", "status", "tou", "ldp", "zkp"],
 
    "jwt":{
       "es256kPrivateKeyJwk":{
          "kty":"EC",
          "kid":"did:example:0xab#verikey-1",
-         "crv":"P-256K",
-         "x":"7KEKZa5xJPh7WVqHJyUpb2MgEe3nA8Rk7eUlXsmBl-M",
-         "y":"3zIgl_ml4RhapyEm5J7lvU-4f5jiBvZr4KgxUjEhl9o",
+         "crv":"P-256",
+         "x":"MKBCTNIcKUSDii11ySs3526iDZ8AiTo7Tu6KPAqv7D4",
+         "y":"4Etl6SRW2YiLUrN5vfvVHuhp7x8PxltmWWlbbM4IFyM",
+         "d":"870MB6gfuTJ4HtUnUvYMyJpr5eUZNP4Bk43bVdj3eAE",
          "key_ops":[
             "sign",
             "verify"
-         ],
-         "d":"IQkxsrZICFvhYEe6ft3wk-LISUUkcFj5uScVQAUGizo"
+         ]
       },
       "rs256PrivateKeyJwk":{
          "kty":"RSA",

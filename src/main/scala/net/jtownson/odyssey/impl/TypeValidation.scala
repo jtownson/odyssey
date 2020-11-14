@@ -4,38 +4,26 @@ import io.circe.Decoder.Result
 import io.circe.{Decoder, DecodingFailure, HCursor, Json}
 
 object TypeValidation {
+
+  val failureMessage =
+    """
+      |Sec 4.3: The value of the type property MUST be,
+      |or map to (through interpretation of the @context property),
+      |one or more URIs.""".stripMargin
+
+  // TODO this needs to be Decoder[Seq[URI]]
   def typeDecoder(expected: String): Decoder[Seq[String]] =
     (hc: HCursor) => {
+      lazy val fail = DecodingFailure(failureMessage, hc.history)
+      lazy val failResult: Decoder.Result[Seq[String]] = Left(fail)
+
       hc.value.fold(
-        jsonNull = Left(
-          DecodingFailure(
-            s"A JSON null is not a valid type definition. Require an array [$expected, ...].",
-            hc.history
-          )
-        ),
-        jsonBoolean = _ =>
-          Left(
-            DecodingFailure(
-              s"A JSON boolean is not a valid type definition. Require an array [$expected, ...].",
-              hc.history
-            )
-          ),
-        jsonNumber = _ =>
-          Left(
-            DecodingFailure(
-              s"A JSON number is not a valid type definition. Require an array [$expected, ...].",
-              hc.history
-            )
-          ),
-        jsonString = _ =>
-          Left(
-            DecodingFailure(
-              s"A JSON string is not a valid type definition. Require an array [$expected, ...].",
-              hc.history
-            )
-          ),
-        jsonArray = (s: Seq[Json]) => decodeTypeAsArray(expected, s),
-        jsonObject = _ => Left(DecodingFailure("object is not a valid type definition", hc.history))
+        jsonNull = failResult,
+        jsonBoolean = _ => failResult,
+        jsonNumber = _ => failResult,
+        jsonString = s => Right(Seq.empty), // TODO
+        jsonArray = a => decodeTypeAsArray(expected, a),
+        jsonObject = _ => failResult
       )
     }
 

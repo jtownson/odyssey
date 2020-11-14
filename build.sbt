@@ -42,7 +42,7 @@ vctest := {
   val npmWorkingDir = "w3c/vc-test-suite"
   val testCmd = "test"
   val installCmd = "install"
-  val classpath = (fullClasspath in Runtime).value.files.mkString(":")
+  val classpath = (fullClasspath in Test).value.files.mkString(":")
   val config = Seq((new File("w3c/config.json"), new File("w3c/vc-test-suite/config.json")))
   IO.copy(config, overwrite = true, preserveLastModified = true, preserveExecutable = false)
 

@@ -6,6 +6,7 @@ import io.circe
 import io.circe.Json
 import io.circe.syntax._
 import net.jtownson.odyssey.VerificationError.ParseError
+import net.jtownson.odyssey.impl.VCJsonCodec._
 import net.jtownson.odyssey.{Jws, Signer, VCDataModel, Verifier}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -16,6 +17,7 @@ object VCJwsCodec {
   def toJws(signer: Signer, vc: VCDataModel) = {
     Jws()
       .withHeaders(jsonHeaders(vc))
+      .withJsonPayload(Json.obj("vc" -> vcJsonEncoder(vc)))
       .withSigner(signer)
   }
 
@@ -32,14 +34,12 @@ object VCJwsCodec {
   }
 
   private def jsonHeaders(vc: VCDataModel): Map[String, Json] = {
-    import VCJsonCodec._
     Seq(
       Some("cty" -> "application/vc+json".asJson),
       vc.id.map(id => "jti" -> id.asJson),
       Some("iss" -> vc.issuer.asJson),
       Some("nbf" -> vc.issuanceDate.toEpochSecond(ZoneOffset.UTC).asJson),
-      vc.expirationDate.map(exp => "exp" -> exp.toEpochSecond(ZoneOffset.UTC).asJson),
-      Some("vc" -> vcJsonEncoder(vc))
+      vc.expirationDate.map(exp => "exp" -> exp.toEpochSecond(ZoneOffset.UTC).asJson)
     ).flatten.toMap
   }
 

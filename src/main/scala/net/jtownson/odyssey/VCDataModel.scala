@@ -1,10 +1,10 @@
 package net.jtownson.odyssey
 
-import java.net.URI
 import java.net.URI.create
 import java.time.LocalDateTime
 
 import io.circe.{Json, JsonObject}
+import net.jtownson.odyssey.impl.VCJsonCodec.vcJsonEncoder
 import net.jtownson.odyssey.impl.{VCJsonCodec, VCJwsCodec}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -19,7 +19,10 @@ case class VCDataModel private (
     subjects: Seq[JsonObject],
     credentialSchemas: Seq[DataSchema],
     dummy: Option[String]
-)
+) {
+  def toJson: Json = vcJsonEncoder(this)
+  def toJws(signer: Signer) = VCJwsCodec.toJws(signer, this)
+}
 
 /**
   * TODO

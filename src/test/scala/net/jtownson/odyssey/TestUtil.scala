@@ -5,11 +5,11 @@ import java.security.PrivateKey
 import java.time.LocalDate
 import java.util.Base64
 
+import io.circe.{ACursor, Decoder, HCursor}
 import net.jtownson.odyssey.Signer.{Es256Signer, HmacSha256Signer}
 import net.jtownson.odyssey.Verifier.{Es256Verifier, HmacSha256Verifier}
 import net.jtownson.odyssey.syntax._
 
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -51,4 +51,29 @@ object TestUtil {
     .withVC(aCredential)
     .withSigner(es256Signer)
 
+  /**
+    * Extract fields from JSON using dot notation names.
+    * e.g. {{{ cursor.jsonStr("a.b.c") }}}
+    * @param cursor an HCursor
+    */
+  implicit class CirceFieldAccess(cursor: HCursor) {
+    import org.scalatest.OptionValues._
+    def jsonStr(dotName: String): String = jsonVal[String](dotName)
+    def jsonArr(dotName: String): List[String] = jsonVal[List[String]](dotName)
+    def jsonNum[T: Numeric: Decoder](dotName: String): T = jsonVal[T](dotName)
+
+    def jsonVal[T: Decoder](dotName: String): T = {
+      @annotation.tailrec
+      def loop(l: List[String], ac: ACursor): T = {
+        l match {
+          case Nil =>
+            ac.as[T].toOption.value
+          case h :: _ =>
+            loop(l.tail, ac.downField(h))
+        }
+      }
+      val l = dotName.split('.').toList
+      loop(l.tail, cursor.downField(l.head))
+    }
+  }
 }
