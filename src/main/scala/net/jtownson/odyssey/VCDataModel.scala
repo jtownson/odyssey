@@ -17,6 +17,7 @@ case class VCDataModel private (
     types: Seq[String],
     contexts: Seq[Json],
     subjects: Seq[JsonObject],
+    credentialSchemas: Seq[DataSchema],
     dummy: Option[String]
 )
 
@@ -39,7 +40,8 @@ object VCDataModel {
       expirationDate: Option[LocalDateTime],
       additionalTypes: Seq[String] = Seq.empty,
       additionalContexts: Seq[Json] = Seq.empty,
-      subjects: Seq[JsonObject]
+      subjects: Seq[JsonObject],
+      credentialSchemas: Seq[DataSchema] = Seq.empty
   ): VCDataModel = {
     import impl.CodecStuff._
     import io.circe.syntax._
@@ -51,6 +53,7 @@ object VCDataModel {
       "VerifiableCredential" +: additionalTypes,
       create("https://www.w3.org/2018/credentials/v1").asJson +: additionalContexts.map(_.asJson),
       subjects,
+      credentialSchemas,
       None
     )
   }

@@ -5,7 +5,7 @@
 
    "generatorOptions":"",
 
-   "sectionsNotSupported": ["schema", "refresh", "evidence", "status", "tou", "ldp", "jwt", "zkp"],
+   "sectionsNotSupported": ["refresh", "evidence", "status", "tou", "ldp", "jwt", "zkp"],
 
    "jwt":{
       "es256kPrivateKeyJwk":{

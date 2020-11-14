@@ -44,13 +44,14 @@ class ContextValidationSpec extends FlatSpec {
   }
 
   it should "validate a mix of URIs and objects" in {
+    val obj = Json.obj(
+      "image" -> "foo".asJson
+    )
     val context = Json.arr(
       "https://www.w3.org/2018/credentials/v1".asJson,
-      Json.obj(
-        "image" -> "foo".asJson
-      )
+      obj
     )
 
-    context.as[Seq[Json]](contextDecoder) shouldBe Right(Seq.empty)
+    context.as[Seq[Json]](contextDecoder) shouldBe Right(Seq(obj))
   }
 }

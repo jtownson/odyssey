@@ -10,7 +10,8 @@ import net.jtownson.odyssey.VerificationError.ParseError
 import net.jtownson.odyssey.impl.ContextValidation.contextDecoder
 import net.jtownson.odyssey.impl.IssuerValidation.issuerDecoder
 import net.jtownson.odyssey.impl.TypeValidation.typeDecoder
-import net.jtownson.odyssey.{VCDataModel, VerificationError}
+import CredentialSchemaValidation.{credentialSchemaDecoder, dataSchemaEncoder}
+import net.jtownson.odyssey.{DataSchema, VCDataModel, VerificationError}
 
 /**
   * Circe encoder/decoder to write verifiable credential data model.
@@ -32,7 +33,8 @@ object VCJsonCodec {
         "issuer" -> vc.issuer.asJson,
         "issuanceDate" -> vc.issuanceDate.asJson,
         "expirationDate" -> vc.expirationDate.map(ldt => ldt.asJson).getOrElse(Json.Null),
-        "credentialSubject" -> strOrArr(vc.subjects)
+        "credentialSubject" -> strOrArr(vc.subjects),
+        "credentialSchema" -> (if (vc.credentialSchemas.nonEmpty) vc.credentialSchemas.asJson else Json.Null)
       ).dropNullValues
     }
   }
@@ -47,9 +49,20 @@ object VCJsonCodec {
         issuanceDate <- hc.downField("issuanceDate").as[LocalDateTime]
         expirationDate <- hc.downField("expirationDate").as[Option[LocalDateTime]]
         credentialSubject <- hc.downField("credentialSubject").as[Json]
+        credentialSchemas <- hc.downField("credentialSchema").as[Option[Seq[DataSchema]]]
       } yield {
+        // TODO what to do with credentialsSchemas?
         val subject: Seq[JsonObject] = foldCredentialSubject(credentialSubject)
-        VCDataModel(id, issuer, issuanceDate, expirationDate, types, contexts, subject)
+        VCDataModel(
+          id,
+          issuer,
+          issuanceDate,
+          expirationDate,
+          types,
+          contexts,
+          subject,
+          credentialSchemas.getOrElse(Seq.empty)
+        )
       }
     }
   }
