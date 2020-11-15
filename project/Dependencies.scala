@@ -24,4 +24,9 @@ object Dependencies {
   lazy val scopt = Seq(
     "com.github.scopt" %% "scopt" % "4.0.0-RC2"
   )
+
+  lazy val jsonLd = Seq(
+    "com.apicatalog" % "titanium-json-ld" % "0.8.5",
+    "org.glassfish" % "jakarta.json" % "1.1.6"
+  )
 }

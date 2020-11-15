@@ -63,7 +63,7 @@ case class Jws[F <: JwsField] private[odyssey] (
     signer.setHeaderParameters(this).copy(signer = Some(signer))
   }
 
-  private def withSignature(signature: Array[Byte]): Jws[F with SignatureField] = {
+  def withSignature(signature: Array[Byte]): Jws[F with SignatureField] = {
     copy(signature = Some(signature))
   }
 

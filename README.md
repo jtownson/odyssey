@@ -59,3 +59,6 @@ You can run the test suite against odyssey using the command `sbt vctest`.
 The first steps for the project will be to fully support the credentials data model.
 
 Next steps will be to provide better support for more signature and revocation schemes.
+
+### Building and Developing
+Note, you need java 11.
