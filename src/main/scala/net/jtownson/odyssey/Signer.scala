@@ -31,7 +31,7 @@ object Signer {
 
     override def setHeaderParameters[F <: JwsField](jws: Jws[F]): Jws[F] = {
       jws
-        .withHeader("alg", "ES256")
+        .withHeader("alg", "ES256K")
         .withHeader("kid", kid)
     }
   }

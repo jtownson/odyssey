@@ -52,7 +52,7 @@ class JwsSpec extends FlatSpec {
     jws.payload.toSeq shouldBe payload.printWith(Printer.noSpaces).getBytes(UTF_8).toSeq
   }
 
-  it should "serialize and deserialize a JWS using an ES256 sig" in {
+  it should "serialize and deserialize a JWS using an ES256K sig" in {
     val payload: Json = Json.obj("key" -> "value".asJson)
     val compactSer = Jws()
       .withJsonPrinter(Printer.noSpaces)
@@ -65,7 +65,7 @@ class JwsSpec extends FlatSpec {
     val jws = Jws.fromCompactSer(compactSer, es256Verifier).futureValue
 
     jws.protectedHeaders("h") shouldBe "hh".asJson
-    jws.protectedHeaders("alg") shouldBe "ES256".asJson
+    jws.protectedHeaders("alg") shouldBe "ES256K".asJson
     jws.payload.toSeq shouldBe payload.printWith(Printer.noSpaces).getBytes(UTF_8).toSeq
   }
 

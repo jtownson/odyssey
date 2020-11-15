@@ -38,6 +38,8 @@ object VCP extends App {
       .action((jwt, config) => config.copy(jwt = Some(jwt))),
     opt[URI]('a', "jwt-aud")
       .action((aud, config) => config.copy(jwtAud = Some(aud))),
+    opt[Unit]("jwt-no-jws")
+      .action((_, config) => config.copy(jwtNoJws = true)),
     arg[File]("<file>")
       .action((file, c) => c.copy(file = Some(file)))
       .text("Input VC")
@@ -89,7 +91,8 @@ object VCP extends App {
       file: Option[File] = None,
       tpe: String = "VerifiableCredential",
       jwt: Option[String] = None,
-      jwtAud: Option[URI] = None
+      jwtAud: Option[URI] = None,
+      jwtNoJws: Boolean = false
   )
 
 //  case class JwtConfig(

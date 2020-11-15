@@ -43,14 +43,14 @@ object Verifier {
   // example asymmetric verifier
   class Es256Verifier(publicKeyResolver: PublicKeyResolver)(implicit ec: ExecutionContext) extends Verifier {
     import io.circe.syntax._
-    override def supportedAlgs: Seq[String] = Seq("ES256")
+    override def supportedAlgs: Seq[String] = Seq("ES256K")
 
     override def verify(
         protectedHeaders: Map[String, Json],
         signerInput: Array[Byte],
         signature: Array[Byte]
     ): Future[Boolean] = {
-      assert(protectedHeaders.get("alg").contains("ES256".asJson)) // check for correct alg header
+      assert(protectedHeaders.get("alg").contains("ES256K".asJson)) // check for correct alg header
 
       val maybeKidHeader = protectedHeaders.get("kid")
 

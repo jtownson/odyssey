@@ -1,9 +1,11 @@
 package net.jtownson.odyssey.impl
 
+import java.nio.charset.StandardCharsets
+import java.nio.charset.StandardCharsets.UTF_8
 import java.time.ZoneOffset
 
 import io.circe
-import io.circe.Json
+import io.circe.{Json, JsonObject}
 import io.circe.syntax._
 import net.jtownson.odyssey.VerificationError.ParseError
 import net.jtownson.odyssey.impl.VCJsonCodec._
@@ -25,10 +27,12 @@ object VCJwsCodec {
       ec: ExecutionContext
   ): Future[VCDataModel] = {
     Jws.fromCompactSer(jwsCompactSer, verifier).flatMap { jws =>
-      jws.protectedHeaders
-        .get("vc")
-        .fold(Future.failed[VCDataModel](ParseError("Missing vc header in JWS")))(vcJson =>
-          toFuture(VCJsonCodec.vcJsonDecoder(vcJson.hcursor))
+      io.circe.parser
+        .parse(new String(jws.payload, UTF_8))
+        .fold(
+          failure => Future.failed[VCDataModel](failure),
+          json =>
+            toFuture(VCJsonCodec.vcJsonDecoder(json.hcursor.downField("vc").as[Json].getOrElse(Json.Null).hcursor))
         )
     }
   }

@@ -6,8 +6,7 @@ import io.circe.{Decoder, DecodingFailure, HCursor, Json}
 object TypeValidation {
 
   val failureMessage =
-    """
-      |Sec 4.3: The value of the type property MUST be,
+    """Sec 4.3: The value of the type property MUST be,
       |or map to (through interpretation of the @context property),
       |one or more URIs.""".stripMargin
 
@@ -21,7 +20,7 @@ object TypeValidation {
         jsonNull = failResult,
         jsonBoolean = _ => failResult,
         jsonNumber = _ => failResult,
-        jsonString = s => Right(Seq.empty), // TODO
+        jsonString = s => if (s == expected) Right(Seq.empty) else failResult,
         jsonArray = a => decodeTypeAsArray(expected, a),
         jsonObject = _ => failResult
       )
