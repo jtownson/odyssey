@@ -3,9 +3,10 @@ package net.jtownson.odyssey
 import java.net.URI.create
 import java.time.LocalDateTime
 
-import io.circe.{Json, JsonObject}
+import io.circe.{Json, JsonObject, Printer}
+import net.jtownson.odyssey.impl.VCJsonCodec
 import net.jtownson.odyssey.impl.VCJsonCodec.vcJsonEncoder
-import net.jtownson.odyssey.impl.{VCJsonCodec, VCJwsCodec}
+import net.jtownson.odyssey.proof.{JwsSigner, JwsVerifier}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -21,7 +22,9 @@ case class VCDataModel private (
     dummy: Option[String]
 ) {
   def toJson: Json = vcJsonEncoder(this)
-  def toJws(signer: Signer) = VCJwsCodec.toJws(signer, this)
+
+  def toJws(signer: JwsSigner, printer: Printer)(implicit ec: ExecutionContext): Future[Jws] =
+    JwsSigner.sign(this, printer, signer)
 }
 
 /**
@@ -61,9 +64,10 @@ object VCDataModel {
     )
   }
 
-  def fromJwsCompactSer(verifier: Verifier, jwsSer: String)(implicit ec: ExecutionContext): Future[VCDataModel] =
-    VCJwsCodec.fromJwsCompactSer(verifier, jwsSer)
-
   def fromJsonLd(jsonLdSer: String): Either[VerificationError, VCDataModel] =
     VCJsonCodec.decodeJsonLd(jsonLdSer)
+
+  def fromJws(verifier: JwsVerifier, jwsCompactSer: String)(implicit ec: ExecutionContext): Future[VCDataModel] = {
+    JwsVerifier.fromJws[VCDataModel](verifier, jwsCompactSer, VCJsonCodec.vcJsonDecoder, "vc")
+  }
 }

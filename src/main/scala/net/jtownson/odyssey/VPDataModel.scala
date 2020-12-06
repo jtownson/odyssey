@@ -3,10 +3,12 @@ package net.jtownson.odyssey
 import java.net.URI
 import java.net.URI.create
 
-import io.circe.Json
+import io.circe.{Json, Printer}
 import io.circe.syntax.EncoderOps
 import net.jtownson.odyssey.impl.CodecStuff.uriEncoder
-import net.jtownson.odyssey.impl.{VPJsonCodec, VPJwsCodec}
+import net.jtownson.odyssey.impl.VPJsonCodec
+import net.jtownson.odyssey.impl.VPJsonCodec.vpJsonEncoder
+import net.jtownson.odyssey.proof.{JwsSigner, JwsVerifier}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -16,7 +18,12 @@ case class VPDataModel private (
     types: Seq[String],
     verifiableCredentials: Seq[VCDataModel],
     holder: Option[URI]
-)
+) {
+  def toJson: Json = vpJsonEncoder(this)
+
+  def toJws(signer: JwsSigner, printer: Printer)(implicit ec: ExecutionContext): Future[Jws] =
+    JwsSigner.sign(this, printer, signer)
+}
 
 object VPDataModel {
   def apply(
@@ -35,8 +42,9 @@ object VPDataModel {
     )
   }
 
-  def fromJwsCompactSer(verifier: Verifier, jwsSer: String)(implicit ec: ExecutionContext): Future[VPDataModel] =
-    VPJwsCodec.fromJwsCompactSer(verifier, jwsSer)
+  def fromJws(verifier: JwsVerifier, jwsCompactSer: String)(implicit ec: ExecutionContext): Future[VPDataModel] = {
+    JwsVerifier.fromJws[VPDataModel](verifier, jwsCompactSer, VPJsonCodec.vpJsonDecoder, "vp")
+  }
 
   def fromJsonLd(jsonLdSer: String): Either[VerificationError, VPDataModel] =
     VPJsonCodec.decodeJsonLd(jsonLdSer)

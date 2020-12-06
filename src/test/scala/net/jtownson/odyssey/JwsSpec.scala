@@ -3,28 +3,29 @@ package net.jtownson.odyssey
 import java.nio.charset.StandardCharsets.UTF_8
 import java.util.Base64
 
-import io.circe._
+import io.circe.Printer
+import io.circe.Printer.spaces2
 import io.circe.syntax._
 import javax.crypto.spec.SecretKeySpec
 import net.jtownson.odyssey.JwsSpec._
-import net.jtownson.odyssey.Signer.{Es256Signer, HmacSha256Signer}
-import net.jtownson.odyssey.Verifier.{Es256Verifier, HmacSha256Verifier}
+import net.jtownson.odyssey.proof.JwsSigner
+import net.jtownson.odyssey.proof.jws.{Es256kJwsSigner, Es256kJwsVerifier, HmacSha256JwsSigner}
 import org.jose4j.jws.JsonWebSignature
 import org.scalatest.FlatSpec
 import org.scalatest.Matchers._
 import org.scalatest.concurrent.ScalaFutures._
 
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 
 class JwsSpec extends FlatSpec {
 
   "Jws" should "interoperate with jose4j" in {
-    val jws = Jws()
-      .withJsonPrinter(Printer.noSpaces)
-      .withJsonPayload(Json.obj("key" -> "value".asJson))
-      .withSigner(hmacSigner)
-      .compactSerializion
-      .futureValue
+    val headers = Jws.utf8ProtectedHeaders(spaces2, hmacSigner.getAlgorithmHeaders)
+    val payload = """{"key":"value"}""".getBytes(UTF_8)
+
+    val signature = hmacSigner.sign(Jws.signingInput(headers, payload)).futureValue
+    val jws = Jws(headers, payload, signature).getOrElse(fail("Invalid headers")).compactSerialization
 
     val jose4jJws = new JsonWebSignature()
     jose4jJws.setCompactSerialization(jws)
@@ -32,41 +33,24 @@ class JwsSpec extends FlatSpec {
 
     jose4jJws.verifySignature() shouldBe true
     jose4jJws.getHeader("alg") shouldBe "HS256"
-    jose4jJws.getPayload shouldBe """{"key":"value"}"""
+    jose4jJws.getPayload shouldBe new String(payload, UTF_8)
   }
 
-  it should "serialize and deserialize a JWS using a HMAC sig" in {
-    val payload: Json = Json.obj("key" -> "value".asJson)
-    val compactSer = Jws()
-      .withJsonPrinter(Printer.noSpaces)
-      .withHeader("h", "hh")
-      .withJsonPayload(payload)
-      .withSigner(hmacSigner)
-      .compactSerializion
-      .futureValue
+  it should "serialize and deserialize a JWS with a signature" in {
+    List((hmacSigner, hmacSigner), (es256Signer, es256Verifier)).foreach { sv =>
+      val (signer, verifier) = sv
+      val protectedHeaders = Map("h" -> "hh".asJson)
+      val utf8Headers = """{"h":"hh"}""".getBytes(UTF_8)
+      val payload = """{"key":"value"}""".getBytes(UTF_8)
+      val jwscs = JwsSigner.sign(protectedHeaders, payload, Printer.spaces2, signer).futureValue.compactSerialization
 
-    val jws = Jws.fromCompactSer(compactSer, hmacVerifier).futureValue
+      val jws = Jws.fromCompactSer(jwscs).getOrElse(fail("Invalid headers"))
 
-    jws.protectedHeaders("h") shouldBe "hh".asJson
-    jws.protectedHeaders("alg") shouldBe "HS256".asJson
-    jws.payload.toSeq shouldBe payload.printWith(Printer.noSpaces).getBytes(UTF_8).toSeq
-  }
-
-  it should "serialize and deserialize a JWS using an ES256K sig" in {
-    val payload: Json = Json.obj("key" -> "value".asJson)
-    val compactSer = Jws()
-      .withJsonPrinter(Printer.noSpaces)
-      .withHeader("h", "hh")
-      .withJsonPayload(payload)
-      .withSigner(es256Signer)
-      .compactSerializion
-      .futureValue
-
-    val jws = Jws.fromCompactSer(compactSer, es256Verifier).futureValue
-
-    jws.protectedHeaders("h") shouldBe "hh".asJson
-    jws.protectedHeaders("alg") shouldBe "ES256K".asJson
-    jws.payload.toSeq shouldBe payload.printWith(Printer.noSpaces).getBytes(UTF_8).toSeq
+      val actualHeaders = jws.protectedHeaders
+      actualHeaders("h") shouldBe "hh".asJson
+      actualHeaders("alg") shouldBe "HS256".asJson
+      jws.payload.toSeq shouldBe payload.toSeq
+    }
   }
 
   it should "be consistent with the example at https://tools.ietf.org/html/rfc7515#appendix-A.1" in {
@@ -90,7 +74,9 @@ class JwsSpec extends FlatSpec {
       109, 104, 48, 100, 72, 65, 54, 76, 121, 57, 108, 101, 71, 70, 116, 99, 71, 120, 108, 76, 109, 78, 118, 98, 83, 57,
       112, 99, 49, 57, 121, 98, 50, 57, 48, 73, 106, 112, 48, 99, 110, 86, 108, 102, 81)
 
-    hmacSigner.sign(Jws.signingInput(protectedHeader, payload)).futureValue.toSeq shouldBe
+    val signature = hmacSigner.sign(Jws.signingInput(protectedHeader, payload)).futureValue
+
+    signature.toSeq shouldBe
       Array[Byte](
         116,
         24,
@@ -126,48 +112,7 @@ class JwsSpec extends FlatSpec {
         121
       ).toSeq
 
-    Jws.sign(protectedHeader, payload, hmacSigner).futureValue.toSeq shouldBe Seq(
-      116,
-      24,
-      223.toByte,
-      180.toByte,
-      151.toByte,
-      153.toByte,
-      224.toByte,
-      37,
-      79,
-      250.toByte,
-      96,
-      125,
-      216.toByte,
-      173.toByte,
-      187.toByte,
-      186.toByte,
-      22,
-      212.toByte,
-      37,
-      77,
-      105,
-      214.toByte,
-      191.toByte,
-      240.toByte,
-      91,
-      88,
-      5,
-      88,
-      83,
-      132.toByte,
-      141.toByte,
-      121
-    )
-
-    Jws
-      .compactSerialization(
-        protectedHeader,
-        payload,
-        hmacSigner
-      )
-      .futureValue shouldBe
+    Jws(protectedHeader, payload, signature).getOrElse(fail("Invalid headers")).compactSerialization shouldBe
       "eyJ0eXAiOiJKV1QiLA0KICJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJqb2UiLA0KICJleHAiOjEzMDA4MTkzODAsDQogImh0dHA6Ly9leGFtcGxlLmNvbS9pc19yb290Ijp0cnVlfQ.dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"
   }
 }
@@ -177,9 +122,8 @@ object JwsSpec {
     "AyM1SysPpbyDfgZld3umj1qzKObwVMkoqQ-EstJQLr_T-1qS0gZH75aKtMN3Yj0iPS4hcgUuTwjAzZr1Z9CAow"
   )
 
-  private val hmacSigner = new HmacSha256Signer(secret)
-  private val hmacVerifier = new HmacSha256Verifier(secret)
+  private val hmacSigner = new HmacSha256JwsSigner(secret)
 
-  private val es256Signer = new Es256Signer(TestUtil.publicKeyRef, TestUtil.privateKey)
-  private val es256Verifier = new Es256Verifier(TestUtil.testKeyResolver)
+  private val es256Signer = new Es256kJwsSigner(TestUtil.publicKeyRef, TestUtil.privateKey)
+  private val es256Verifier = new Es256kJwsVerifier(TestUtil.testKeyResolver)
 }

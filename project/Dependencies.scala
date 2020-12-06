@@ -12,8 +12,8 @@ object Dependencies {
   )
 
   lazy val `bouncy-castle` = Seq(
-    "org.bouncycastle" % "bcprov-jdk15on" % "1.62" % Test,
-    "org.bouncycastle" % "bcpkix-jdk15on" % "1.62" % Test
+    "org.bouncycastle" % "bcprov-jdk15on" % "1.62",
+    "org.bouncycastle" % "bcpkix-jdk15on" % "1.62"
   )
 
   lazy val jose = Seq(

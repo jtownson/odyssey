@@ -6,16 +6,15 @@ import java.time.LocalDate
 import java.util.Base64
 
 import io.circe.{ACursor, Decoder, HCursor}
-import net.jtownson.odyssey.Signer.{Es256Signer, HmacSha256Signer}
-import net.jtownson.odyssey.Verifier.{Es256Verifier, HmacSha256Verifier}
+import net.jtownson.odyssey.proof.jws.{Es256kJwsSigner, Es256kJwsVerifier, HmacSha256JwsSigner}
 import net.jtownson.odyssey.syntax._
 
-import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 
 object TestUtil {
 
-  val (publicKeyRef, privateKey): (URI, PrivateKey) = KeyFoo.getKeyPair
+  val (publicKeyRef, privateKey): (URI, PrivateKey) = KeyFoo.getECKeyPair
 
   val secret = Base64.getUrlDecoder.decode(
     "AyM1SysPpbyDfgZld3umj1qzKObwVMkoqQ-EstJQLr_T-1qS0gZH75aKtMN3Yj0iPS4hcgUuTwjAzZr1Z9CAow"
@@ -25,11 +24,10 @@ object TestUtil {
     Future.successful(KeyFoo.getPublicKeyFromRef(publicKeyRef))
   }
 
-  val hmacSigner = new HmacSha256Signer(secret)
-  val hmacVerifier = new HmacSha256Verifier(secret)
+  val hmacSigner = new HmacSha256JwsSigner(secret)
 
-  val es256Signer = new Es256Signer(TestUtil.publicKeyRef, TestUtil.privateKey)
-  val es256Verifier = new Es256Verifier(TestUtil.testKeyResolver)
+  val es256Signer = new Es256kJwsSigner(TestUtil.publicKeyRef, TestUtil.privateKey)
+  val es256Verifier = new Es256kJwsVerifier(TestUtil.testKeyResolver)
 
   val aCredential = VC()
     .withAdditionalType("AddressCredential")

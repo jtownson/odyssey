@@ -5,7 +5,7 @@ import java.security.PrivateKey
 import java.time.LocalDate
 
 import io.circe.Printer
-import net.jtownson.odyssey.Verifier.Es256Verifier
+import net.jtownson.odyssey.proof.jws.Es256kJwsVerifier
 import org.jose4j.jws.AlgorithmIdentifiers.ECDSA_USING_P256_CURVE_AND_SHA256
 import org.scalatest.FlatSpec
 import org.scalatest.concurrent.ScalaFutures._
@@ -17,7 +17,7 @@ class VerificationAndSigningSketch extends FlatSpec {
 
   import syntax._
 
-  val (publicKeyRef, privateKey): (URI, PrivateKey) = KeyFoo.getKeyPair
+  val (publicKeyRef, privateKey): (URI, PrivateKey) = KeyFoo.getECKeyPair
 
   val vc = VC()
     .withAdditionalType("AddressCredential")
@@ -28,7 +28,7 @@ class VerificationAndSigningSketch extends FlatSpec {
     .withIssuanceDate(LocalDate.of(2020, 1, 1).atStartOfDay())
     .withExpirationDate(LocalDate.of(2021, 1, 1).atStartOfDay())
     .withSubjectAttributes(
-      "id" -> "did:ata:abc123",
+      "id" -> "did:example:abc123",
       "name" -> "Her Majesty The Queen",
       "jobTitle" -> "Queen",
       "address" -> "Buckingham Palace, SW1A 1AA"
@@ -39,7 +39,7 @@ class VerificationAndSigningSketch extends FlatSpec {
 
   // To send it somewhere else, we will serialize
   // to JWS...
-  val jws: String = vc.toJws.compactSerializion.futureValue
+  val jws: String = vc.toJws(Printer.spaces2).futureValue.compactSerialization
 
   println("Generated JWS for wire transfer: ")
   println(jws)
@@ -47,9 +47,9 @@ class VerificationAndSigningSketch extends FlatSpec {
   // ... somewhere else, another app, another part of the system, we obtain the jws...
   val publicKeyResolver: PublicKeyResolver = (publicKeyRef: URI) =>
     Future.successful(KeyFoo.getPublicKeyFromRef(publicKeyRef))
-  val verifier = new Es256Verifier(publicKeyResolver)
+  val verifier = new Es256kJwsVerifier(publicKeyResolver)
 
-  val parseResult: VCDataModel = VCDataModel.fromJwsCompactSer(verifier, jws).futureValue
+  val parseResult: VCDataModel = VCDataModel.fromJws(verifier, jws).futureValue
 
   println(s"Received dataset has a valid signature and decodes to the following dataset:")
   import net.jtownson.odyssey.impl.VCJsonCodec

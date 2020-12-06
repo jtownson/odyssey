@@ -3,21 +3,23 @@ package net.jtownson.odyssey
 import java.net.URI
 import java.security.PrivateKey
 
-import io.circe.Json
+import io.circe.{Json, Printer}
 import io.circe.syntax.EncoderOps
-import net.jtownson.odyssey.Signer.Es256Signer
 import net.jtownson.odyssey.VC.VCField
 import net.jtownson.odyssey.VP.VPField
 import net.jtownson.odyssey.VP.VPField.{EmptyField, MandatoryFields, SignatureField}
 import net.jtownson.odyssey.impl.CodecStuff.uriEncoder
-import net.jtownson.odyssey.impl.VPJwsCodec
+import net.jtownson.odyssey.proof.JwsSigner
+import net.jtownson.odyssey.proof.jws.Es256kJwsSigner
+
+import scala.concurrent.{ExecutionContext, Future}
 
 case class VP[F <: VPField, G <: VCField] private[odyssey] (
     id: Option[String] = None,
     holder: Option[URI] = None,
     additionalTypes: Seq[String] = Seq(),
     additionalContexts: Seq[Json] = Seq(),
-    signer: Option[Signer] = None,
+    signer: Option[JwsSigner] = None,
     vc: Option[VC[G]] = None
 ) {
 
@@ -40,11 +42,11 @@ case class VP[F <: VPField, G <: VCField] private[odyssey] (
   def withEs256Signature(
       publicKeyRef: URI,
       privateKey: PrivateKey
-  ): VP[F with SignatureField, G] = {
-    withSigner(new Es256Signer(publicKeyRef, privateKey))
+  )(implicit ec: ExecutionContext): VP[F with SignatureField, G] = {
+    withSigner(new Es256kJwsSigner(publicKeyRef, privateKey))
   }
 
-  def withSigner(signer: Signer): VP[F with SignatureField, G] = {
+  def withSigner(signer: JwsSigner): VP[F with SignatureField, G] = {
     copy(signer = Some(signer))
   }
 
@@ -58,8 +60,10 @@ case class VP[F <: VPField, G <: VCField] private[odyssey] (
     VPDataModel(additionalContexts, id, additionalTypes, vcs, holder)
   }
 
-  def toJws(implicit ev1: F =:= MandatoryFields, ev2: G =:= VCField.MandatoryFields) = {
-    VPJwsCodec.toJws(signer.get, dataModel)
+  def toJws(
+      printer: Printer
+  )(implicit ev1: F =:= MandatoryFields, ev2: G =:= VCField.MandatoryFields, ec: ExecutionContext): Future[Jws] = {
+    dataModel.toJws(signer.get, printer)
   }
 }
 

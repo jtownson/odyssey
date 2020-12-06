@@ -3,118 +3,51 @@ package net.jtownson.odyssey
 import java.nio.charset.StandardCharsets.{US_ASCII, UTF_8}
 import java.util.Base64
 
-import io.circe._
-import io.circe.syntax._
-import net.jtownson.odyssey.Jws.JwsField.{EmptyField, SignatureField}
-import net.jtownson.odyssey.Jws.{JwsField, MandatoryFields, utf8}
-import net.jtownson.odyssey.VerificationError.InvalidSignature
-
-import scala.concurrent.{ExecutionContext, Future}
-import scala.util.{Failure, Success, Try}
+import io.circe.{parser, _}
+import io.circe.syntax.EncoderOps
+import net.jtownson.odyssey.VerificationError.{InvalidSignature, ParseError}
 
 // Providing JWS rather than use an existing java library
-// because we want to guarantee compatibility with scalaJs
-// and require support for custom proof algorithms.
-case class Jws[F <: JwsField] private[odyssey] (
-    printer: Printer = Printer.spaces2,
-    protectedHeaders: Map[String, Json] = Map.empty,
-    payload: Array[Byte] = Array.empty,
-    signer: Option[Signer] = None,
-    signature: Option[Array[Byte]] = None
+// because we require support for custom proof algorithms.
+case class Jws(
+    protectedHeaders: Map[String, Json],
+    utf8ProtectedHeaders: Array[Byte],
+    payload: Array[Byte],
+    signature: Array[Byte]
 ) {
 
-  def withJsonPrinter(printer: Printer): Jws[F] = {
-    copy(printer = printer)
-  }
-
-  def withHeaders(protectedHeaders: Map[String, Json]): Jws[F] = {
-    copy(protectedHeaders = protectedHeaders)
-  }
-
-  def withHeader(name: String, value: Json): Jws[F] = {
-    copy(protectedHeaders = protectedHeaders + (name -> value))
-  }
-
-  def withHeader(name: String, value: String): Jws[F] = {
-    copy(protectedHeaders = protectedHeaders + (name -> value.asJson))
-  }
-
-  def withJsonPayload(payload: Json): Jws[F] = {
-    copy(payload = payload.printWith(printer).getBytes(UTF_8))
-  }
-
-  def withRawPayload(payload: Array[Byte]): Jws[F] = {
-    copy(payload = payload)
-  }
-
-  def withRawPayload(contentType: String, payload: Array[Byte]): Jws[F] = {
-    withHeader("cty", contentType).withRawPayload(payload)
-  }
-
-  def withStringPayload(payload: String): Jws[F] = {
-    withRawPayload(payload.getBytes(UTF_8))
-  }
-
-  def withStringPayload(contentType: String, payload: String): Jws[F] = {
-    withHeader("cty", contentType).withStringPayload(payload)
-  }
-
-  def withSigner(signer: Signer): Jws[F with SignatureField] = {
-    signer.setHeaderParameters(this).copy(signer = Some(signer))
-  }
-
-  def withSignature(signature: Array[Byte]): Jws[F with SignatureField] = {
-    copy(signature = Some(signature))
-  }
-
-  def compactSerializion(implicit ev: F =:= MandatoryFields, ec: ExecutionContext): Future[String] = {
-    if (signature.isDefined) {
-      Future.successful(Jws.compactSerialization(utf8ProtectedHeader, payload, signature.get))
-    } else {
-      Jws.compactSerialization(utf8ProtectedHeader, payload, signer.get)
-    }
-  }
-
-  def utf8ProtectedHeader: Array[Byte] = {
-    utf8(protectedHeaders.asJson.printWith(printer))
+  def compactSerialization: String = {
+    Jws.compactSerialization(utf8ProtectedHeaders, payload, signature)
   }
 }
 
 object Jws {
 
-  def apply(): Jws[EmptyField] = new Jws[EmptyField]()
-
-  def fromCompactSer(ser: String, verifier: Verifier)(implicit ec: ExecutionContext) = {
-    parse(ser) match {
-      case Success(ParseResult(protectedHeaders, signerInput, payload, signature)) =>
-        verifier
-          .verify(protectedHeaders, signerInput, signature)
-          .flatMap { success: Boolean =>
-            if (success) {
-              Future.successful(
-                Jws()
-                  .withHeaders(protectedHeaders)
-                  .withRawPayload(payload)
-                  .withSignature(signature)
-              )
-            } else {
-              Future.failed(InvalidSignature())
-            }
-          }
-      case Failure(t) =>
-        Future.failed(t)
-    }
+  def apply(
+      utf8ProtectedHeaders: Array[Byte],
+      payload: Array[Byte],
+      signature: Array[Byte]
+  ): Either[ParseError, Jws] = {
+    parser
+      .parse(new String(utf8ProtectedHeaders, UTF_8))
+      .left
+      .map(e => ParseError(e.message))
+      .flatMap(headerJson =>
+        headerJson
+          .as[Map[String, Json]]
+          .left
+          .map(f => ParseError(f.message))
+          .map(headers => Jws(headers, utf8ProtectedHeaders, payload, signature))
+      )
   }
 
-  sealed trait JwsField
-
-  object JwsField {
-    sealed trait EmptyField extends JwsField
-    sealed trait JsonPayloadField extends JwsField
-    sealed trait SignatureField extends JwsField
+  def utf8ProtectedHeaders(printer: Printer, jsonHeaders: Map[String, Json]): Array[Byte] = {
+    utf8(printer.print(jsonHeaders.asJson))
   }
 
-  type MandatoryFields = EmptyField with SignatureField
+  def fromCompactSer(ser: String): Either[ParseError, Jws] = {
+    parse(ser)
+  }
 
   def base64Url(data: Array[Byte]): String = {
     Base64.getUrlEncoder.withoutPadding().encodeToString(data)
@@ -128,27 +61,14 @@ object Jws {
     data.getBytes(US_ASCII)
   }
 
-  def utf8(data: String): Array[Byte] = {
-    data.getBytes(UTF_8)
+  def signingInput(jws: Jws): Array[Byte] = {
+    signingInput(jws.utf8ProtectedHeaders, jws.payload)
   }
 
   def signingInput(utf8ProtectedHeader: Array[Byte], payload: Array[Byte]): Array[Byte] = {
     // ASCII(BASE64URL(UTF8(JWS Protected Header)) || '.' || BASE64URL(JWS Payload))
     ascii(s"${base64Url(utf8ProtectedHeader)}.${base64Url(payload)}")
   }
-
-  def sign(utf8ProtectedHeader: Array[Byte], payload: Array[Byte], signer: Signer): Future[Array[Byte]] = {
-    signer.sign(signingInput(utf8ProtectedHeader, payload))
-  }
-
-  def compactSerialization(
-      utf8ProtectedHeader: Array[Byte],
-      payload: Array[Byte],
-      signingDevice: Signer
-  )(implicit ec: ExecutionContext): Future[String] =
-    for {
-      signature <- sign(utf8ProtectedHeader, payload, signingDevice)
-    } yield compactSerialization(utf8ProtectedHeader, payload, signature)
 
   def compactSerialization(
       utf8ProtectedHeader: Array[Byte],
@@ -161,36 +81,21 @@ object Jws {
     s"${base64Url(utf8ProtectedHeader)}.${base64Url(payload)}.${base64Url(signature)}"
   }
 
-  private[Jws] case class ParseResult(
-      protectedHeaders: Map[String, Json],
-      signerInput: Array[Byte],
-      payload: Array[Byte],
-      signature: Array[Byte]
-  )
-
-  def parse(compactSer: String): Try[ParseResult] = {
+  private def parse(compactSer: String): Either[ParseError, Jws] = {
     val parts = compactSer.split('.')
     if (parts.length != 3) {
-      Failure(new IllegalArgumentException(s"Expect three parts in JWS compact serialization. Got ${parts.length}"))
+      Left(ParseError(s"Insufficient parts in JWS '$compactSer'"))
     } else {
       val (headerEnc, payloadEnc, sigEnc) = (parts(0), parts(1), parts(2))
-      val headerDec = new String(Base64.getUrlDecoder.decode(headerEnc), UTF_8)
-      val headerParseResult: Either[ParsingFailure, Json] = io.circe.parser.parse(headerDec)
-
-      val signerInput = ascii(compactSer.substring(0, compactSer.lastIndexOf('.')))
-
+      val headerDec = Base64.getUrlDecoder.decode(headerEnc)
       val payloadDec = Base64.getUrlDecoder.decode(payloadEnc)
       val sigDec = Base64.getUrlDecoder.decode(sigEnc)
 
-      val parseResult = headerParseResult.flatMap { headerJson: Json =>
-        if (!headerJson.isObject) {
-          Left(DecodingFailure(s"JWS header is not a valid JSON object: $headerDec", List.empty))
-        } else {
-          headerJson.as[JsonObject].map(headerObj => ParseResult(headerObj.toMap, signerInput, payloadDec, sigDec))
-        }
-      }
-
-      parseResult.toTry
+      Jws(headerDec, payloadDec, sigDec)
     }
+  }
+
+  def utf8(data: String): Array[Byte] = {
+    data.getBytes(UTF_8)
   }
 }

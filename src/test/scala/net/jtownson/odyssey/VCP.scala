@@ -7,13 +7,14 @@ import java.util.Base64
 
 import com.nimbusds.jose.jwk.ECKey
 import io.circe.parser._
-import net.jtownson.odyssey.Signer.Es256Signer
+import net.jtownson.odyssey.impl.Using
 import net.jtownson.odyssey.impl.VPJsonCodec.vpJsonEncoder
-import net.jtownson.odyssey.impl.{Using, VCJwsCodec}
+import net.jtownson.odyssey.proof.JwsSigner
+import net.jtownson.odyssey.proof.jws.Es256kJwsSigner
 import scopt.OParser
 
-import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 import scala.io.Source
 
@@ -67,10 +68,10 @@ object VCP extends App {
                   parse(jwtConfig).getOrElse(throw new IllegalArgumentException("Invalid JWT Config JSON")).hcursor
                 val keyJson = hc.jsonVal[Json]("es256kPrivateKeyJwk")
                 val eCKey = ECKey.parse(Printer.noSpaces.print(keyJson))
-                val signer = new Es256Signer(URI.create(eCKey.getKeyID), eCKey.toECPrivateKey)
+                val signer = new Es256kJwsSigner(URI.create(eCKey.getKeyID), eCKey.toECPrivateKey)
 
-                val jws = vc.toJws(signer)
-                println(Await.result(jws.compactSerializion, Duration.Inf))
+                val proof = JwsSigner.sign(vc, Printer.spaces2, signer).map(_.compactSerialization)
+                println(Await.result(proof, Duration.Inf))
               } else {
                 print(Printer.spaces2.print(vcJsonEncoder(vc)))
               }
@@ -94,8 +95,4 @@ object VCP extends App {
       jwtAud: Option[URI] = None,
       jwtNoJws: Boolean = false
   )
-
-//  case class JwtConfig(
-//    es256KPrivateKeyJws
-//                      )
 }

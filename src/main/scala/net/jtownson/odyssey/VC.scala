@@ -5,12 +5,14 @@ import java.security.PrivateKey
 import java.time.LocalDateTime
 
 import io.circe.syntax._
-import io.circe.{Json, JsonObject}
-import net.jtownson.odyssey.Signer.Es256Signer
+import io.circe.{Json, JsonObject, Printer}
 import net.jtownson.odyssey.VC.VCField
 import net.jtownson.odyssey.VC.VCField._
 import net.jtownson.odyssey.impl.CodecStuff.uriEncoder
-import net.jtownson.odyssey.impl.VCJwsCodec
+import net.jtownson.odyssey.proof.JwsSigner
+import net.jtownson.odyssey.proof.jws.Es256kJwsSigner
+
+import scala.concurrent.{ExecutionContext, Future}
 
 case class VC[F <: VCField] private[odyssey] (
     additionalTypes: Seq[String] = Seq(),
@@ -19,7 +21,7 @@ case class VC[F <: VCField] private[odyssey] (
     issuer: Option[URI] = None,
     issuerAttributes: Option[JsonObject] = None,
     subjects: Seq[JsonObject] = Seq.empty,
-    signer: Option[Signer] = None,
+    signer: Option[JwsSigner] = None,
     issuanceDate: Option[LocalDateTime] = None,
     expirationDate: Option[LocalDateTime] = None
 ) {
@@ -55,15 +57,15 @@ case class VC[F <: VCField] private[odyssey] (
     copy(additionalContexts = additionalContexts :+ ctx.asJson(uriEncoder))
   }
 
-  def withSigner(signer: Signer): VC[F with SignatureField] = {
+  def withSigner(signer: JwsSigner): VC[F with SignatureField] = {
     copy(signer = Some(signer))
   }
 
   def withEs256Signature(
       publicKeyRef: URI,
       privateKey: PrivateKey
-  ): VC[F with SignatureField] = {
-    withSigner(new Es256Signer(publicKeyRef, privateKey))
+  )(implicit ec: ExecutionContext): VC[F with SignatureField] = {
+    withSigner(new Es256kJwsSigner(publicKeyRef, privateKey))
   }
 
   private def buildIssuer: Json =
@@ -77,10 +79,8 @@ case class VC[F <: VCField] private[odyssey] (
   def dataModel(implicit ev: F =:= MandatoryFields): VCDataModel =
     VCDataModel(id, buildIssuer, issuanceDate.get, expirationDate, additionalTypes, additionalContexts, subjects)
 
-  def toJws(implicit ev: F =:= MandatoryFields) = {
-    val vc =
-      VCDataModel(id, buildIssuer, issuanceDate.get, expirationDate, additionalTypes, additionalContexts, subjects)
-    VCJwsCodec.toJws(signer.get, vc)
+  def toJws(printer: Printer)(implicit ev: F =:= MandatoryFields, ec: ExecutionContext): Future[Jws] = {
+    dataModel.toJws(signer.get, printer)
   }
 }
 

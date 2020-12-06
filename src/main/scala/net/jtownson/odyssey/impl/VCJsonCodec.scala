@@ -11,7 +11,10 @@ import net.jtownson.odyssey.impl.ContextValidation.contextDecoder
 import net.jtownson.odyssey.impl.IssuerValidation.issuerDecoder
 import net.jtownson.odyssey.impl.TypeValidation.typeDecoder
 import CredentialSchemaValidation.{credentialSchemaDecoder, dataSchemaEncoder}
+import net.jtownson.odyssey.proof.JwsSigner
 import net.jtownson.odyssey.{DataSchema, VCDataModel, VerificationError}
+
+import scala.concurrent.Future
 
 /**
   * Circe encoder/decoder to write verifiable credential data model.
@@ -19,6 +22,10 @@ import net.jtownson.odyssey.{DataSchema, VCDataModel, VerificationError}
 object VCJsonCodec {
 
   import CodecStuff._
+
+  def toJsonLd(signer: JwsSigner, VCDataModel: VCDataModel): Future[Json] = {
+    ???
+  }
 
   def decodeJsonLd(jsonLdSer: String): Either[VerificationError, VCDataModel] = {
     decode(jsonLdSer)(vcJsonDecoder).left.map(err => ParseError(err.getMessage))
