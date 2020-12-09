@@ -39,14 +39,17 @@ object JwsVerifier {
     } yield {
       for {
         verificationResult <- verifier.verify(jws)
-        rr <-
-          if (verificationResult.valid) {
-            Future.failed(InvalidSignature())
-          } else {
-            Future.successful(vc)
-          }
-      } yield rr
+        resultFuture <- resultToFuture(vc, verificationResult)
+      } yield resultFuture
     }
     parseResult.fold(Future.failed(_), identity)
+  }
+
+  private def resultToFuture[T](vc: T, verificationResult: VerificationResult) = {
+    if (verificationResult.valid) {
+      Future.successful(vc)
+    } else {
+      Future.failed(InvalidSignature())
+    }
   }
 }

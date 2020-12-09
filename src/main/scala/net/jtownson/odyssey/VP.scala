@@ -1,16 +1,14 @@
 package net.jtownson.odyssey
 
 import java.net.URI
-import java.security.PrivateKey
 
-import io.circe.{Json, Printer}
 import io.circe.syntax.EncoderOps
+import io.circe.{Json, Printer}
 import net.jtownson.odyssey.VC.VCField
 import net.jtownson.odyssey.VP.VPField
-import net.jtownson.odyssey.VP.VPField.{EmptyField, MandatoryFields, SignatureField}
+import net.jtownson.odyssey.VP.VPField.{EmptyField, MandatoryFields}
 import net.jtownson.odyssey.impl.CodecStuff.uriEncoder
 import net.jtownson.odyssey.proof.JwsSigner
-import net.jtownson.odyssey.proof.jws.Es256kJwsSigner
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -19,7 +17,6 @@ case class VP[F <: VPField, G <: VCField] private[odyssey] (
     holder: Option[URI] = None,
     additionalTypes: Seq[String] = Seq(),
     additionalContexts: Seq[Json] = Seq(),
-    signer: Option[JwsSigner] = None,
     vc: Option[VC[G]] = None
 ) {
 
@@ -39,17 +36,6 @@ case class VP[F <: VPField, G <: VCField] private[odyssey] (
     copy(holder = Some(holder))
   }
 
-  def withEs256Signature(
-      publicKeyRef: URI,
-      privateKey: PrivateKey
-  )(implicit ec: ExecutionContext): VP[F with SignatureField, G] = {
-    withSigner(new Es256kJwsSigner(publicKeyRef, privateKey))
-  }
-
-  def withSigner(signer: JwsSigner): VP[F with SignatureField, G] = {
-    copy(signer = Some(signer))
-  }
-
   // TODO multiple VCs will need HLists I suppose - joy
   def withVC[H <: VCField](vc: VC[H]): VP[F, H] = {
     copy(vc = Some(vc))
@@ -61,9 +47,10 @@ case class VP[F <: VPField, G <: VCField] private[odyssey] (
   }
 
   def toJws(
+      signer: JwsSigner,
       printer: Printer
   )(implicit ev1: F =:= MandatoryFields, ev2: G =:= VCField.MandatoryFields, ec: ExecutionContext): Future[Jws] = {
-    dataModel.toJws(signer.get, printer)
+    dataModel.toJws(signer, printer)
   }
 }
 
@@ -75,9 +62,8 @@ object VP {
 
   object VPField {
     sealed trait EmptyField extends VPField
-    sealed trait SignatureField extends VPField
     sealed trait IssuanceDateField extends VPField
 
-    type MandatoryFields = EmptyField with SignatureField
+    type MandatoryFields = EmptyField
   }
 }

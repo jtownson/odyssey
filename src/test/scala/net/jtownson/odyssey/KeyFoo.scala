@@ -1,70 +1,40 @@
 package net.jtownson.odyssey
 
-import java.io.{File, StringReader}
 import java.net.URI
-import java.nio.file.Paths
-import java.security.spec.PKCS8EncodedKeySpec
-import java.security.{KeyFactory, KeyPair, PrivateKey, PublicKey}
-import java.util.Base64
+import java.security.interfaces.{ECPrivateKey, ECPublicKey}
+import java.security.spec.ECGenParameterSpec
+import java.security.{KeyPairGenerator, PrivateKey, PublicKey}
 
-import net.jtownson.odyssey.impl.Using
-import org.bouncycastle.crypto.params.Ed25519PrivateKeyParameters
-import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter
-import org.bouncycastle.openssl.{PEMKeyPair, PEMParser}
+import net.jtownson.odyssey.VerificationError.PublicKeyResolutionError
 
-import scala.io.Source
+import scala.concurrent.Future
 
 object KeyFoo {
 
-  def getECKeyPair: (URI, PrivateKey) = {
-    getKeyPair("src/test/resources/id_ecdsa.pem")
+  def generateEDKeyPair(): (PrivateKey, PublicKey, URI, PublicKeyResolver) = {
+    val generator = KeyPairGenerator.getInstance("Ed25519")
+    val keyPair = generator.generateKeyPair()
+    val publicKeyId = URI.create("key:ed25519-key-id")
+    val publicKey = keyPair.getPublic
+    val privateKey = keyPair.getPrivate
+    (privateKey, publicKey, publicKeyId, publicKeyResolver(publicKeyId, publicKey))
   }
 
-  def getEDKeyPair: (URI, Ed25519PrivateKeyParameters) = {
-    val str = getKey(Paths.get("src/test/resources/id_ed25519").toFile).trim
-    val privateKeyBytes = Base64.getDecoder.decode(str)
-    val privateKey = new Ed25519PrivateKeyParameters(privateKeyBytes, 0)
-    val publicKeyRef = Paths.get("src/test/resources/id_ed25519.pub").toUri
-
-    (publicKeyRef, privateKey)
+  def generateECKeyPair(): (ECPrivateKey, ECPublicKey, URI, PublicKeyResolver) = {
+    val generator = KeyPairGenerator.getInstance("ECDSA")
+    val spec = new ECGenParameterSpec("secp256k1")
+    generator.initialize(spec)
+    val keyPair = generator.generateKeyPair()
+    val ecPublicKey = keyPair.getPublic.asInstanceOf[ECPublicKey]
+    val ecPrivateKey = keyPair.getPrivate.asInstanceOf[ECPrivateKey]
+    val keyId = URI.create("key:ec-key-id")
+    (ecPrivateKey, ecPublicKey, keyId, publicKeyResolver(keyId, ecPublicKey))
   }
 
-  def getEDKeyPairJdk: (URI, PrivateKey) = {
-    val str = getKey(Paths.get("src/test/resources/id_ed25519").toFile).trim
-    val privateKeyBytes = Base64.getDecoder.decode(str)
-
-    val kf: KeyFactory = KeyFactory.getInstance("ED25519", "BC")
-    val ks: PKCS8EncodedKeySpec = new PKCS8EncodedKeySpec(privateKeyBytes)
-
-    val privateKey = kf.generatePrivate(ks)
-    val publicKeyRef = Paths.get("src/test/resources/id_ed25519.pub").toUri
-
-    (publicKeyRef, privateKey)
-  }
-
-  def getPublicKeyFromRef(publicKeyRef: URI): PublicKey = {
-    getKeyPair(new File(publicKeyRef)).getPublic
-  }
-
-  private def getKeyPair(key: String): (URI, PrivateKey) = {
-    val keyFile = Paths.get(key).toFile
-    val publicKeyURI = keyFile.toURI
-
-    (publicKeyURI, getKeyPair(keyFile).getPrivate)
-  }
-
-  private def getKey(file: File): String = {
-    Using(Source.fromFile(file, "UTF-8"))(_.mkString).get
-  }
-
-  private def getKeyPair(file: File): KeyPair = {
-    parseKeyPair(getKey(file))
-  }
-
-  private def parseKeyPair(key: String): KeyPair = {
-    val keyReader = new StringReader(key)
-    val parser = new PEMParser(keyReader)
-    val pemPair = parser.readObject().asInstanceOf[PEMKeyPair]
-    new JcaPEMKeyConverter().getKeyPair(pemPair)
+  private def publicKeyResolver(publicKeyId: URI, publicKey: PublicKey): PublicKeyResolver = { (publicKeyRef: URI) =>
+    if (publicKeyRef == publicKeyId)
+      Future.successful(publicKey)
+    else
+      Future.failed(PublicKeyResolutionError())
   }
 }

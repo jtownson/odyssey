@@ -5,7 +5,7 @@ sealed abstract class VerificationError(val msg: String) extends Exception(msg)
 object VerificationError {
   case class InvalidSignature() extends VerificationError("Invalid signature detected")
   case class ParseError(override val msg: String) extends VerificationError(msg)
-  case class PublicKeyResolutionError() extends VerificationError("Failed to resolving public verification key")
+  case class PublicKeyResolutionError() extends VerificationError("Failed to resolve public verification key")
   case class VCDataModelError(override val msg: String) extends VerificationError(msg)
 
   val ContextShouldBeAnArrayOrString = VCDataModelError(

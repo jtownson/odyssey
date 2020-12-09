@@ -1,55 +1,76 @@
 package net.jtownson.odyssey
 
 import java.nio.charset.StandardCharsets.UTF_8
-import java.util.Base64
+import java.security.interfaces.{ECPrivateKey, ECPublicKey}
 
-import io.circe.Printer
-import io.circe.Printer.spaces2
+import com.auth0.jwt.JWT
+import com.auth0.jwt.algorithms.Algorithm.ECDSA256K
+import com.auth0.jwt.interfaces.ECDSAKeyProvider
 import io.circe.syntax._
+import io.circe.{Json, Printer}
 import javax.crypto.spec.SecretKeySpec
-import net.jtownson.odyssey.JwsSpec._
 import net.jtownson.odyssey.proof.JwsSigner
-import net.jtownson.odyssey.proof.jws.{Es256kJwsSigner, Es256kJwsVerifier, HmacSha256JwsSigner}
+import net.jtownson.odyssey.proof.JwsVerifier.VerificationResult
 import org.jose4j.jws.JsonWebSignature
 import org.scalatest.FlatSpec
+import org.scalatest.Inside.inside
 import org.scalatest.Matchers._
 import org.scalatest.concurrent.ScalaFutures._
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
+import scala.util.{Failure, Success, Try}
+
+import TestUtil._
 
 class JwsSpec extends FlatSpec {
 
-  "Jws" should "interoperate with jose4j" in {
-    val headers = Jws.utf8ProtectedHeaders(spaces2, hmacSigner.getAlgorithmHeaders)
+  "Odyssey Jws" should "be verifiable with jose4j" in {
     val payload = """{"key":"value"}""".getBytes(UTF_8)
 
-    val signature = hmacSigner.sign(Jws.signingInput(headers, payload)).futureValue
-    val jws = Jws(headers, payload, signature).getOrElse(fail("Invalid headers")).compactSerialization
+    val jws =
+      JwsSigner.sign(Map.empty[String, Json], payload, Printer.spaces2, hmacSigner).futureValue.compactSerialization
 
     val jose4jJws = new JsonWebSignature()
     jose4jJws.setCompactSerialization(jws)
-    jose4jJws.setKey(new SecretKeySpec(secret, "HmacSHA256"))
+    jose4jJws.setKey(new SecretKeySpec(hmacSecret, "HmacSHA256"))
 
     jose4jJws.verifySignature() shouldBe true
     jose4jJws.getHeader("alg") shouldBe "HS256"
     jose4jJws.getPayload shouldBe new String(payload, UTF_8)
   }
 
-  it should "serialize and deserialize a JWS with a signature" in {
-    List((hmacSigner, hmacSigner), (es256Signer, es256Verifier)).foreach { sv =>
+  it should "be verifiable with auth0" in {
+    val payload = """{"key":"value"}""".getBytes(UTF_8)
+
+    val jws =
+      JwsSigner.sign(Map.empty[String, Json], payload, Printer.spaces2, ecJwsSigner).futureValue.compactSerialization
+    val auth0Algo = ECDSA256K(new ECDSAKeyProvider {
+      override def getPublicKeyById(keyId: String): ECPublicKey = ecPublicKey
+      override def getPrivateKey: ECPrivateKey = ecPrivateKey
+      override def getPrivateKeyId: String = ecPublicKeyId.toString
+    })
+
+    val auth0Verifier = JWT.require(auth0Algo).build()
+
+    inside(Try(auth0Verifier.verify(jws))) {
+      case Success(_) =>
+      case Failure(t) => fail(t)
+    }
+  }
+
+  it should "verify with itself" in {
+    List((hmacSigner, hmacSigner), (ecJwsSigner, ecJwsVerifier)).foreach { sv =>
       val (signer, verifier) = sv
       val protectedHeaders = Map("h" -> "hh".asJson)
-      val utf8Headers = """{"h":"hh"}""".getBytes(UTF_8)
       val payload = """{"key":"value"}""".getBytes(UTF_8)
-      val jwscs = JwsSigner.sign(protectedHeaders, payload, Printer.spaces2, signer).futureValue.compactSerialization
+      val jwsSer = JwsSigner.sign(protectedHeaders, payload, Printer.spaces2, signer).futureValue.compactSerialization
 
-      val jws = Jws.fromCompactSer(jwscs).getOrElse(fail("Invalid headers"))
+      val jwsDeser = Jws.fromCompactSer(jwsSer).getOrElse(fail("Invalid headers"))
 
-      val actualHeaders = jws.protectedHeaders
-      actualHeaders("h") shouldBe "hh".asJson
-      actualHeaders("alg") shouldBe "HS256".asJson
-      jws.payload.toSeq shouldBe payload.toSeq
+      jwsDeser.protectedHeaders("h") shouldBe "hh".asJson
+      jwsDeser.payload.toSeq shouldBe payload.toSeq
+
+      verifier.verify(jwsDeser).futureValue shouldBe VerificationResult(headersValid = true, signatureValid = true)
     }
   }
 
@@ -115,15 +136,4 @@ class JwsSpec extends FlatSpec {
     Jws(protectedHeader, payload, signature).getOrElse(fail("Invalid headers")).compactSerialization shouldBe
       "eyJ0eXAiOiJKV1QiLA0KICJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJqb2UiLA0KICJleHAiOjEzMDA4MTkzODAsDQogImh0dHA6Ly9leGFtcGxlLmNvbS9pc19yb290Ijp0cnVlfQ.dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"
   }
-}
-
-object JwsSpec {
-  private val secret = Base64.getUrlDecoder.decode(
-    "AyM1SysPpbyDfgZld3umj1qzKObwVMkoqQ-EstJQLr_T-1qS0gZH75aKtMN3Yj0iPS4hcgUuTwjAzZr1Z9CAow"
-  )
-
-  private val hmacSigner = new HmacSha256JwsSigner(secret)
-
-  private val es256Signer = new Es256kJwsSigner(TestUtil.publicKeyRef, TestUtil.privateKey)
-  private val es256Verifier = new Es256kJwsVerifier(TestUtil.testKeyResolver)
 }

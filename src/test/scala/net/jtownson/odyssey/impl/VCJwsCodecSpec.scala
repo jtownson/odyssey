@@ -11,9 +11,9 @@ import scala.concurrent.ExecutionContext.Implicits.global
 class VCJwsCodecSpec extends FlatSpec {
 
   "VCJwsCodec" should "parse a generated JWT" in {
-    val jwsSer = TestUtil.aCredential.toJws(Printer.spaces2).futureValue.compactSerialization
+    val jwsSer = TestUtil.aCredential.toJws(TestUtil.ecJwsSigner, Printer.spaces2).futureValue.compactSerialization
 
-    val vc: VCDataModel = VCDataModel.fromJws(TestUtil.es256Verifier, jwsSer).futureValue
+    val vc: VCDataModel = VCDataModel.fromJws(TestUtil.ecJwsVerifier, jwsSer).futureValue
 
     vc shouldBe TestUtil.aCredential.dataModel
   }

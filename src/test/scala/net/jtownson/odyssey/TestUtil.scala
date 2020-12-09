@@ -1,33 +1,28 @@
 package net.jtownson.odyssey
 
-import java.net.URI
-import java.security.PrivateKey
+import java.security.Security
 import java.time.LocalDate
 import java.util.Base64
 
 import io.circe.{ACursor, Decoder, HCursor}
 import net.jtownson.odyssey.proof.jws.{Es256kJwsSigner, Es256kJwsVerifier, HmacSha256JwsSigner}
 import net.jtownson.odyssey.syntax._
+import org.bouncycastle.jce.provider.BouncyCastleProvider
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
 
 object TestUtil {
 
-  val (publicKeyRef, privateKey): (URI, PrivateKey) = KeyFoo.getECKeyPair
+  Security.addProvider(new BouncyCastleProvider)
 
-  val secret = Base64.getUrlDecoder.decode(
+  val (ecPrivateKey, ecPublicKey, ecPublicKeyId, ecPublicKeyResolver) = KeyFoo.generateECKeyPair()
+  val ecJwsSigner = new Es256kJwsSigner(ecPublicKeyId, ecPrivateKey)
+  val ecJwsVerifier = new Es256kJwsVerifier(ecPublicKeyResolver)
+
+  val hmacSecret: Array[Byte] = Base64.getUrlDecoder.decode(
     "AyM1SysPpbyDfgZld3umj1qzKObwVMkoqQ-EstJQLr_T-1qS0gZH75aKtMN3Yj0iPS4hcgUuTwjAzZr1Z9CAow"
   )
-
-  val testKeyResolver: PublicKeyResolver = { (publicKeyRef: URI) =>
-    Future.successful(KeyFoo.getPublicKeyFromRef(publicKeyRef))
-  }
-
-  val hmacSigner = new HmacSha256JwsSigner(secret)
-
-  val es256Signer = new Es256kJwsSigner(TestUtil.publicKeyRef, TestUtil.privateKey)
-  val es256Verifier = new Es256kJwsVerifier(TestUtil.testKeyResolver)
+  val hmacSigner = new HmacSha256JwsSigner(hmacSecret)
 
   val aCredential = VC()
     .withAdditionalType("AddressCredential")
@@ -43,11 +38,8 @@ object TestUtil {
       ("jobTitle", "Queen"),
       ("address", "Buckingham Palace, SW1A 1AA")
     )
-    .withSigner(es256Signer)
 
-  val aPresentation = VP()
-    .withVC(aCredential)
-    .withSigner(es256Signer)
+  val aPresentation = VP().withVC(aCredential)
 
   /**
     * Extract fields from JSON using dot notation names.

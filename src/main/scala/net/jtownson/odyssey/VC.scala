@@ -1,7 +1,6 @@
 package net.jtownson.odyssey
 
 import java.net.URI
-import java.security.PrivateKey
 import java.time.LocalDateTime
 
 import io.circe.syntax._
@@ -10,7 +9,6 @@ import net.jtownson.odyssey.VC.VCField
 import net.jtownson.odyssey.VC.VCField._
 import net.jtownson.odyssey.impl.CodecStuff.uriEncoder
 import net.jtownson.odyssey.proof.JwsSigner
-import net.jtownson.odyssey.proof.jws.Es256kJwsSigner
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -21,7 +19,6 @@ case class VC[F <: VCField] private[odyssey] (
     issuer: Option[URI] = None,
     issuerAttributes: Option[JsonObject] = None,
     subjects: Seq[JsonObject] = Seq.empty,
-    signer: Option[JwsSigner] = None,
     issuanceDate: Option[LocalDateTime] = None,
     expirationDate: Option[LocalDateTime] = None
 ) {
@@ -57,17 +54,6 @@ case class VC[F <: VCField] private[odyssey] (
     copy(additionalContexts = additionalContexts :+ ctx.asJson(uriEncoder))
   }
 
-  def withSigner(signer: JwsSigner): VC[F with SignatureField] = {
-    copy(signer = Some(signer))
-  }
-
-  def withEs256Signature(
-      publicKeyRef: URI,
-      privateKey: PrivateKey
-  )(implicit ec: ExecutionContext): VC[F with SignatureField] = {
-    withSigner(new Es256kJwsSigner(publicKeyRef, privateKey))
-  }
-
   private def buildIssuer: Json =
     issuerAttributes match {
       case Some(attributes) =>
@@ -79,8 +65,11 @@ case class VC[F <: VCField] private[odyssey] (
   def dataModel(implicit ev: F =:= MandatoryFields): VCDataModel =
     VCDataModel(id, buildIssuer, issuanceDate.get, expirationDate, additionalTypes, additionalContexts, subjects)
 
-  def toJws(printer: Printer)(implicit ev: F =:= MandatoryFields, ec: ExecutionContext): Future[Jws] = {
-    dataModel.toJws(signer.get, printer)
+  def toJws(signer: JwsSigner, printer: Printer)(implicit
+      ev: F =:= MandatoryFields,
+      ec: ExecutionContext
+  ): Future[Jws] = {
+    dataModel.toJws(signer, printer)
   }
 }
 
@@ -93,14 +82,9 @@ object VC {
   object VCField {
     sealed trait EmptyField extends VCField
     sealed trait CredentialSubjectField extends VCField
-    sealed trait SignatureField extends VCField
     sealed trait IssuerField extends VCField
     sealed trait IssuanceDateField extends VCField
 
-    type MandatoryFields = EmptyField
-      with IssuerField
-      with IssuanceDateField
-      with CredentialSubjectField
-      with SignatureField
+    type MandatoryFields = EmptyField with IssuerField with IssuanceDateField with CredentialSubjectField
   }
 }

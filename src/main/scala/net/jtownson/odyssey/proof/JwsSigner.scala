@@ -39,12 +39,11 @@ object JwsSigner {
     sign(protectedHeaders, utf8(printer.print(payloadJson)), printer, signer)
   }
 
-  def sign(protectedHeaders: Map[String, Json], payload: Array[Byte], printer: Printer, signer: JwsSigner)(implicit
-      ec: ExecutionContext
+  def sign(protectedHeaders: Map[String, Json] = Map.empty, payload: Array[Byte], printer: Printer, signer: JwsSigner)(
+      implicit ec: ExecutionContext
   ): Future[Jws] = {
     val allProtectedHeaders = protectedHeaders ++ signer.getAlgorithmHeaders
-    val headers = printer.print(allProtectedHeaders.asJson)
-    val utf8Headers = utf8(headers)
+    val utf8Headers = utf8(printer.print(allProtectedHeaders.asJson))
     signer
       .sign(Jws.signingInput(utf8Headers, payload))
       .map(signature => Jws(protectedHeaders, utf8Headers, payload, signature))
