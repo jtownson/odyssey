@@ -3,12 +3,14 @@ package net.jtownson.odyssey
 import java.net.URI.create
 import java.time.{LocalDateTime, ZoneOffset}
 
+import io.circe.Json.JArray
 import io.circe.syntax.EncoderOps
 import io.circe.{Json, JsonObject, Printer}
 import net.jtownson.odyssey.impl.VCJsonCodec
 import net.jtownson.odyssey.impl.VCJsonCodec.vcJsonEncoder
 import net.jtownson.odyssey.proof.{JwsSigner, JwsVerifier, LdSigner}
 
+import scala.collection.immutable
 import scala.concurrent.{ExecutionContext, Future}
 
 case class VCDataModel private (
@@ -28,12 +30,13 @@ case class VCDataModel private (
     signer.sign(this)
 
   def toJws(signer: JwsSigner, printer: Printer)(implicit ec: ExecutionContext): Future[Jws] = {
-    JwsSigner.sign(credentialHeaders, Json.obj("vc" -> vcJsonEncoder(this)), printer, signer)
+    val payloadJson = credentialClaims(vcJsonEncoder(this)).asJson
+    JwsSigner.sign(credentialHeaders, payloadJson, printer, signer)
   }
 
   def toJws(signer: LdSigner, printer: Printer)(implicit ec: ExecutionContext): Future[Jws] = {
     signer.sign(this).map { jsonWithProof: Json =>
-      val payloadJson = Json.obj("vc" -> jsonWithProof)
+      val payloadJson = credentialClaims(jsonWithProof).asJson
       val payload = Jws.utf8(printer.print(payloadJson))
       val headers = Jws.utf8ProtectedHeaders(printer, credentialHeaders + ("alg" -> "none".asJson))
       Jws(credentialHeaders, headers, payload, Array.emptyByteArray)
@@ -42,14 +45,45 @@ case class VCDataModel private (
 
   private val credentialHeaders: Map[String, Json] = {
     Seq(
-      Some("cty" -> "application/vc+json".asJson),
-      id.map(id => "jti" -> id.asJson),
-      Some("iss" -> issuer.asJson),
-      Some("nbf" -> issuanceDate.toEpochSecond(ZoneOffset.UTC).asJson),
-      expirationDate.map(exp => "exp" -> exp.toEpochSecond(ZoneOffset.UTC).asJson)
+      Some("cty" -> "application/vc+json".asJson)
+//      id.map(id => "jti" -> id.asJson),
+//      Some("iss" -> issuer.asJson),
+//      Some("nbf" -> issuanceDate.toEpochSecond(ZoneOffset.UTC).asJson),
+//      expirationDate.map(exp => "exp" -> exp.toEpochSecond(ZoneOffset.UTC).asJson)
     ).flatten.toMap
   }
 
+  private def credentialClaims(vcJson: Json): Map[String, Json] = {
+    Seq(
+//      Some("cty" -> "application/vc+json".asJson),
+      id.map(id => "jti" -> id.asJson),
+      Some("iss" -> issuer.asJson),
+      getSubjectJson,
+      Some("nbf" -> issuanceDate.toEpochSecond(ZoneOffset.UTC).asJson),
+      expirationDate.map(exp => "exp" -> exp.toEpochSecond(ZoneOffset.UTC).asJson),
+      Some("vc" -> vcJson)
+    ).flatten.toMap
+  }
+
+  private def getSubjectJson: Option[(String, Json)] = {
+    if (subjects.length == 1) {
+      subjects(0)("id").map(subjectId => "sub" -> subjectId)
+    } else {
+      val subjectValue: immutable.Seq[Json] = subjects
+        .foldLeft(Json.arr()) { (acc, nextSubject) =>
+          nextSubject("id").fold(acc) { subjectId =>
+            (acc.asArray.get :+ subjectId).asJson
+          }
+        }
+        .asArray
+        .get
+      if (subjectValue.nonEmpty) {
+        Some("sub" -> subjectValue.asJson)
+      } else {
+        None
+      }
+    }
+  }
 }
 
 /**
