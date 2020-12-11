@@ -3,14 +3,16 @@ package net.jtownson.odyssey
 import java.io.File
 import java.net.URI
 import java.nio.charset.StandardCharsets.UTF_8
+import java.security.Security
 import java.util.Base64
 
 import com.nimbusds.jose.jwk.ECKey
 import io.circe.parser._
 import net.jtownson.odyssey.impl.Using
 import net.jtownson.odyssey.impl.VPJsonCodec.vpJsonEncoder
-import net.jtownson.odyssey.proof.JwsSigner
 import net.jtownson.odyssey.proof.jws.Es256kJwsSigner
+import net.jtownson.odyssey.proof.ld.Ed25519Signature2018
+import org.bouncycastle.jce.provider.BouncyCastleProvider
 import scopt.OParser
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -24,6 +26,7 @@ import scala.io.Source
   * and echo those that it considers valid, or print an error.
   */
 object VCP extends App {
+  Security.addProvider(new BouncyCastleProvider)
 
   import io.circe._
   import net.jtownson.odyssey.impl.VCJsonCodec._
@@ -62,7 +65,7 @@ object VCP extends App {
             case Left(err) =>
               System.err.println(s"Error processing verifiable credential: ${err.getMessage}")
             case Right(vc) =>
-              if (config.jwt.isDefined) {
+              if (config.jwt.isDefined && !config.jwtNoJws) {
                 val jwtConfig = new String(Base64.getDecoder.decode(config.jwt.get), UTF_8)
                 val hc =
                   parse(jwtConfig).getOrElse(throw new IllegalArgumentException("Invalid JWT Config JSON")).hcursor
@@ -70,8 +73,13 @@ object VCP extends App {
                 val eCKey = ECKey.parse(Printer.noSpaces.print(keyJson))
                 val signer = new Es256kJwsSigner(URI.create(eCKey.getKeyID), eCKey.toECPrivateKey)
 
-                val proof = JwsSigner.sign(vc, Printer.spaces2, signer).map(_.compactSerialization)
+                val proof = vc.toJws(signer, Printer.spaces2).map(_.compactSerialization)
                 println(Await.result(proof, Duration.Inf))
+              } else if (config.jwtNoJws) {
+                val (privateKey, publicKey, publicKeyId, resolver) = KeyFoo.generateEDKeyPair()
+                val edSigner = new Ed25519Signature2018(publicKeyId, privateKey)
+                val jwt = Await.result(vc.toJws(edSigner, Printer.spaces2), Duration.Inf)
+                println(jwt.compactSerialization)
               } else {
                 print(Printer.spaces2.print(vcJsonEncoder(vc)))
               }

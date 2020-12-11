@@ -28,11 +28,6 @@ object JwsSigner {
     sign(protectedHeaders, Json.obj("vp" -> vpJsonEncoder(vp)), printer, signer)
   }
 
-  def sign(vc: VCDataModel, printer: Printer, signer: JwsSigner)(implicit ec: ExecutionContext): Future[Jws] = {
-    val protectedHeaders = getCredentialHeaders(vc)
-    sign(protectedHeaders, Json.obj("vc" -> vcJsonEncoder(vc)), printer, signer)
-  }
-
   def sign(protectedHeaders: Map[String, Json], payloadJson: Json, printer: Printer, signer: JwsSigner)(implicit
       ec: ExecutionContext
   ): Future[Jws] = {
@@ -47,16 +42,6 @@ object JwsSigner {
     signer
       .sign(Jws.signingInput(utf8Headers, payload))
       .map(signature => Jws(protectedHeaders, utf8Headers, payload, signature))
-  }
-
-  private def getCredentialHeaders(vc: VCDataModel): Map[String, Json] = {
-    Seq(
-      Some("cty" -> "application/vc+json".asJson),
-      vc.id.map(id => "jti" -> id.asJson),
-      Some("iss" -> vc.issuer.asJson),
-      Some("nbf" -> vc.issuanceDate.toEpochSecond(ZoneOffset.UTC).asJson),
-      vc.expirationDate.map(exp => "exp" -> exp.toEpochSecond(ZoneOffset.UTC).asJson)
-    ).flatten.toMap
   }
 
   private def getPresentationHeaders(vp: VPDataModel): Map[String, Json] = {
