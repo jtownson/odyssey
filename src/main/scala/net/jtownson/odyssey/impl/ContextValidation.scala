@@ -42,15 +42,21 @@ object ContextValidation {
       )
     } else {
       for {
-        _ <- validatedHead(URI.create("https://www.w3.org/2018/credentials/v1"), s.head)
+        _ <-
+          validatedHead(URI.create("https://www.w3.org/2018/credentials/v1"), s.head).left
+            .flatMap(_ => validatedHead(URI.create("https://w3.org/2018/credentials/v1"), s.head))
         tail <- validatedTail(s.tail)
       } yield tail
     }
   }
 
   private def decodeContextAsString(s: String): Result[Seq[Json]] = {
-    Try(new URI(s))
-      .filter(_.toString == "https://www.w3.org/2018/credentials/v1")
+    Try(
+      new URI(s)
+    ) // TODO w3.org is arguably not a valid context URL (contradicts spec) but is used in one of the JWT tests.
+      .filter(uri =>
+        uri.toString == "https://www.w3.org/2018/credentials/v1" || uri.toString == "https://w3.org/2018/credentials/v1"
+      )
       .map(_ => Seq.empty)
       .toEither
       .left

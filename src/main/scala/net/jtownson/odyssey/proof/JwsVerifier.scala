@@ -4,9 +4,9 @@ import java.nio.charset.StandardCharsets.UTF_8
 
 import io.circe.parser.parse
 import io.circe.{Decoder, Json}
-import net.jtownson.odyssey.{Jws, VerificationError}
 import net.jtownson.odyssey.VerificationError.{InvalidSignature, ParseError}
 import net.jtownson.odyssey.proof.JwsVerifier.VerificationResult
+import net.jtownson.odyssey.{Jws, VerificationError}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -22,27 +22,61 @@ object JwsVerifier {
   def fromJws[T](verifier: JwsVerifier, jwsCompactSer: String, jsonCodec: Decoder[T], bodyElement: String)(implicit
       ec: ExecutionContext
   ): Future[T] = {
-    val parseResult: Either[VerificationError, Future[T]] = for {
+    val parseResult2 = parseJws(jwsCompactSer, jsonCodec, bodyElement)
+    parseResult2.fold(
+      parserError => Future.failed(parserError),
+      result => {
+        val (jws, t) = result
+        verifier.verify(jws).flatMap(vr => resultToFuture[T](t, vr))
+      }
+    )
+  }
+
+  def fromJws[T](
+      jwsCompactSer: String,
+      jsonCodec: Decoder[T],
+      bodyElement: String,
+      fixupBodyElement: Json => Either[ParseError, Json]
+  ): Either[VerificationError, T] = {
+    parseJws(jwsCompactSer, jsonCodec, bodyElement, fixupBodyElement).map(_._2)
+  }
+
+  private def parseJws[T](
+      jwsCompactSer: String,
+      jsonCodec: Decoder[T],
+      claimName: String,
+      fixupBodyElement: Json => Either[ParseError, Json] = Right(_)
+  ): Either[VerificationError, (Jws, T)] = {
+    for {
       jws <- Jws.fromCompactSer(jwsCompactSer)
-      payloadJson <- parse(new String(jws.payload, UTF_8)).left.map(_ =>
-        ParseError(s"Unable to parse body to JSON: '$jwsCompactSer'.")
+      payloadJson <- parseBody(jwsCompactSer, jws)
+      bodyJsonFixup <- fixupBodyElement(payloadJson)
+      t <- parseT(jwsCompactSer, jsonCodec, claimName, bodyJsonFixup)
+    } yield (jws, t)
+  }
+
+  private def parseT[T](jwsCompactSer: String, jsonCodec: Decoder[T], bodyElement: String, bodyJson: Json) = {
+    jsonCodec(bodyJson.hcursor).left.map(decodingFailure =>
+      ParseError(
+        s"$bodyElement entry in body cannot be read due to decoding failure '${decodingFailure.message}'. Jws: '$jwsCompactSer'."
       )
-      bodyJson <-
-        payloadJson.hcursor
-          .downField(bodyElement)
-          .as[Json]
-          .left
-          .map(_ => ParseError(s"No '$bodyElement' entry in body JSON: '$jwsCompactSer'."))
-      vc <- jsonCodec(bodyJson.hcursor).left.map(_ =>
-        ParseError(s"$bodyElement entry in body cannot be read: '$jwsCompactSer'.")
-      )
-    } yield {
-      for {
-        verificationResult <- verifier.verify(jws)
-        resultFuture <- resultToFuture(vc, verificationResult)
-      } yield resultFuture
-    }
-    parseResult.fold(Future.failed(_), identity)
+    )
+  }
+
+  private def parseBody[T](jwsCompactSer: String, jws: Jws): Either[ParseError, Json] = {
+    parse(new String(jws.payload, UTF_8)).left.map(_ => ParseError(s"Unable to parse body to JSON: '$jwsCompactSer'."))
+  }
+
+  private def parseBodyElement[T](
+      jwsCompactSer: String,
+      bodyElement: String,
+      payloadJson: Json
+  ): Either[ParseError, Json] = {
+    payloadJson.hcursor
+      .downField(bodyElement)
+      .as[Json]
+      .left
+      .map(_ => ParseError(s"No '$bodyElement' entry in body JSON: '$jwsCompactSer'."))
   }
 
   private def resultToFuture[T](vc: T, verificationResult: VerificationResult) = {

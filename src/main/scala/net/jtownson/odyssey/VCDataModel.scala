@@ -1,13 +1,15 @@
 package net.jtownson.odyssey
 
+import java.net.URI
 import java.net.URI.create
 import java.time.{LocalDateTime, ZoneOffset}
 
 import io.circe.Json.JArray
 import io.circe.syntax.EncoderOps
-import io.circe.{Json, JsonObject, Printer}
-import net.jtownson.odyssey.impl.VCJsonCodec
-import net.jtownson.odyssey.impl.VCJsonCodec.vcJsonEncoder
+import io.circe.{DecodingFailure, Json, JsonObject, Printer}
+import net.jtownson.odyssey.VerificationError.ParseError
+import net.jtownson.odyssey.impl.{CodecStuff, VCJsonCodec}
+import net.jtownson.odyssey.impl.VCJsonCodec.{vcJsonDecoder, vcJsonEncoder}
 import net.jtownson.odyssey.proof.{JwsSigner, JwsVerifier, LdSigner}
 
 import scala.collection.immutable
@@ -44,18 +46,11 @@ case class VCDataModel private (
   }
 
   private val credentialHeaders: Map[String, Json] = {
-    Seq(
-      Some("cty" -> "application/vc+json".asJson)
-//      id.map(id => "jti" -> id.asJson),
-//      Some("iss" -> issuer.asJson),
-//      Some("nbf" -> issuanceDate.toEpochSecond(ZoneOffset.UTC).asJson),
-//      expirationDate.map(exp => "exp" -> exp.toEpochSecond(ZoneOffset.UTC).asJson)
-    ).flatten.toMap
+    Seq(Some("cty" -> "application/vc+json".asJson)).flatten.toMap
   }
 
   private def credentialClaims(vcJson: Json): Map[String, Json] = {
     Seq(
-//      Some("cty" -> "application/vc+json".asJson),
       id.map(id => "jti" -> id.asJson),
       Some("iss" -> issuer.asJson),
       getSubjectJson,
@@ -127,6 +122,66 @@ object VCDataModel {
     VCJsonCodec.decodeJsonLd(jsonLdSer)
 
   def fromJws(verifier: JwsVerifier, jwsCompactSer: String)(implicit ec: ExecutionContext): Future[VCDataModel] = {
-    JwsVerifier.fromJws[VCDataModel](verifier, jwsCompactSer, VCJsonCodec.vcJsonDecoder, "vc")
+    JwsVerifier.fromJws[VCDataModel](verifier, jwsCompactSer, vcJsonDecoder, "vc")
+  }
+
+  def fromJws(jwsCompactSer: String): Either[VerificationError, VCDataModel] = {
+    JwsVerifier.fromJws[VCDataModel](jwsCompactSer, vcJsonDecoder, "vc", json => credentialFixup(json))
+  }
+
+  private def credentialFixup(payloadJson: Json): Either[ParseError, Json] = {
+    /*
+    If exp is present, the UNIX timestamp MUST be converted to an [RFC3339] date-time,
+    and MUST be used to set the value of the expirationDate property of credentialSubject of the new JSON object.
+
+    If iss is present, the value MUST be used to set the issuer property of the new JSON object.
+
+    If nbf is present, the UNIX timestamp MUST be converted to an [RFC3339] date-time,
+    and MUST be used to set the value of the issuanceDate property of the new JSON object.'
+
+    If sub is present, the value MUST be used to set the value of the id property of credentialSubject of the new JSON object.
+
+    If jti is present, the value MUST be used to set the value of the id property of the new JSON object.
+     */
+    import CodecStuff._
+    def fixExp(vc: Map[String, Json], maybeExp: Option[Long]): Map[String, Json] = {
+      fixUnixTimestamp("expirationDate", vc, maybeExp)
+    }
+
+    def fixIss(vc: Map[String, Json], maybeIss: Option[URI]): Map[String, Json] = {
+      maybeIss.fold(vc) { iss => vc + ("issuer" -> iss.asJson) }
+    }
+
+    def fixNbf(vc: Map[String, Json], maybeNbf: Option[Long]): Map[String, Json] = {
+      fixUnixTimestamp("issuanceDate", vc, maybeNbf)
+    }
+
+    def fixSub(vc: Map[String, Json], maybeSub: Option[URI]): Map[String, Json] = {
+      maybeSub.fold(vc) { sub => vc + ("credentialSubject" -> Json.obj("id" -> sub.asJson)) }
+    }
+
+    def fixJti(vc: Map[String, Json], maybeJti: Option[URI]): Map[String, Json] = {
+      maybeJti.fold(vc) { jti => vc + ("id" -> jti.asJson) }
+    }
+
+    def fixUnixTimestamp(elmt: String, vc: Map[String, Json], maybeTs: Option[Long]): Map[String, Json] = {
+      maybeTs.fold(vc) { ts =>
+        val expDateTime = LocalDateTime.ofEpochSecond(ts, 0, ZoneOffset.UTC)
+        vc + (elmt -> expDateTime.asJson)
+      }
+    }
+
+    val hc = payloadJson.hcursor
+    val f: Either[DecodingFailure, Json] = for {
+      vc <- hc.downField("vc").as[Map[String, Json]]
+      exp <- hc.downField("exp").as[Option[Long]]
+      iss <- hc.downField("iss").as[Option[URI]]
+      nbf <- hc.downField("nbf").as[Option[Long]]
+      sub <- hc.downField("sub").as[Option[URI]]
+      jti <- hc.downField("jti").as[Option[URI]]
+    } yield {
+      fixExp(fixIss(fixNbf(fixSub(fixJti(vc, jti), sub), nbf), iss), exp).asJson
+    }
+    f.left.map(decodingFailure => ParseError(decodingFailure.message))
   }
 }

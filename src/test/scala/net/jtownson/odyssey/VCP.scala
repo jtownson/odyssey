@@ -44,6 +44,8 @@ object VCP extends App {
       .action((aud, config) => config.copy(jwtAud = Some(aud))),
     opt[Unit]("jwt-no-jws")
       .action((_, config) => config.copy(jwtNoJws = true)),
+    opt[Unit]("jwt-decode")
+      .action((_, config) => config.copy(jwtDecode = true)),
     arg[File]("<file>")
       .action((file, c) => c.copy(file = Some(file)))
       .text("Input VC")
@@ -58,34 +60,20 @@ object VCP extends App {
 
   OParser.parse(parser, args, Config()).foreach { config: Config =>
     config.file.foreach { file =>
-      Using(Source.fromFile(file, "UTF-8"))(_.mkString).foreach { jsonLd =>
+      Using(Source.fromFile(file, "UTF-8"))(_.mkString).foreach { testContent =>
         if (config.tpe == "VerifiableCredential") {
-          import TestUtil.CirceFieldAccess
-          VCDataModel.fromJsonLd(jsonLd) match {
-            case Left(err) =>
-              System.err.println(s"Error processing verifiable credential: ${err.getMessage}")
-            case Right(vc) =>
-              if (config.jwt.isDefined && !config.jwtNoJws) {
-                val jwtConfig = new String(Base64.getDecoder.decode(config.jwt.get), UTF_8)
-                val hc =
-                  parse(jwtConfig).getOrElse(throw new IllegalArgumentException("Invalid JWT Config JSON")).hcursor
-                val keyJson = hc.jsonVal[Json]("es256kPrivateKeyJwk")
-                val eCKey = ECKey.parse(Printer.noSpaces.print(keyJson))
-                val signer = new Es256kJwsSigner(URI.create(eCKey.getKeyID), eCKey.toECPrivateKey)
-
-                val proof = vc.toJws(signer, Printer.spaces2).map(_.compactSerialization)
-                println(Await.result(proof, Duration.Inf))
-              } else if (config.jwtNoJws) {
-                val (privateKey, publicKey, publicKeyId, resolver) = KeyFoo.generateEDKeyPair()
-                val edSigner = new Ed25519Signature2018(publicKeyId, privateKey)
-                val jwt = Await.result(vc.toJws(edSigner, Printer.spaces2), Duration.Inf)
-                println(jwt.compactSerialization)
-              } else {
+          if (config.jwtDecode) {
+            VCDataModel.fromJws(jwsCompactSer = testContent) match {
+              case Left(err) =>
+                System.err.println(s"Error decoding JWS: ${err.getMessage}.")
+              case Right(vc) =>
                 print(Printer.spaces2.print(vcJsonEncoder(vc)))
-              }
+            }
+          } else {
+            processJsonLdCredential(config, jsonLd = testContent)
           }
         } else {
-          VPDataModel.fromJsonLd(jsonLd) match {
+          VPDataModel.fromJsonLd(jsonLdSer = testContent) match {
             case Left(err) =>
               System.err.println(s"Error processing verifiable presentation: ${err.getMessage}.")
             case Right(vp) =>
@@ -96,11 +84,39 @@ object VCP extends App {
     }
   }
 
+  private def processJsonLdCredential(config: Config, jsonLd: String) = {
+    import TestUtil.CirceFieldAccess
+    VCDataModel.fromJsonLd(jsonLd) match {
+      case Left(err) =>
+        System.err.println(s"Error processing verifiable credential: ${err.getMessage}")
+      case Right(vc) =>
+        if (config.jwt.isDefined && !config.jwtNoJws) {
+          val jwtConfig = new String(Base64.getDecoder.decode(config.jwt.get), UTF_8)
+          val hc =
+            parse(jwtConfig).getOrElse(throw new IllegalArgumentException("Invalid JWT Config JSON")).hcursor
+          val keyJson = hc.jsonVal[Json]("es256kPrivateKeyJwk")
+          val eCKey = ECKey.parse(Printer.noSpaces.print(keyJson))
+          val signer = new Es256kJwsSigner(URI.create(eCKey.getKeyID), eCKey.toECPrivateKey)
+
+          val proof = vc.toJws(signer, Printer.spaces2).map(_.compactSerialization)
+          println(Await.result(proof, Duration.Inf))
+        } else if (config.jwtNoJws) {
+          val (privateKey, publicKey, publicKeyId, resolver) = KeyFoo.generateEDKeyPair()
+          val edSigner = new Ed25519Signature2018(publicKeyId, privateKey)
+          val jwt = Await.result(vc.toJws(edSigner, Printer.spaces2), Duration.Inf)
+          println(jwt.compactSerialization)
+        } else {
+          print(Printer.spaces2.print(vcJsonEncoder(vc)))
+        }
+    }
+  }
+
   case class Config(
       file: Option[File] = None,
       tpe: String = "VerifiableCredential",
       jwt: Option[String] = None,
       jwtAud: Option[URI] = None,
-      jwtNoJws: Boolean = false
+      jwtNoJws: Boolean = false,
+      jwtDecode: Boolean = false
   )
 }
