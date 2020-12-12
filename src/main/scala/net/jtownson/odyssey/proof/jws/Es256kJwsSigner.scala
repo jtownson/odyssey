@@ -54,7 +54,7 @@ class Es256kJwsSigner(publicKeyRef: URI, privateKey: ECPrivateKey)(implicit ec: 
   def verify(data: Array[Byte], signature: Array[Byte], publicKey: PublicKey): Boolean = {
     publicKey match {
       case ecPublicKey: ECPublicKey => Ecdsa.verify(data, signature, ecPublicKey)
-      case _ => false
+      case _                        => false
     }
   }
 

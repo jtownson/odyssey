@@ -63,9 +63,9 @@ lazy val root = (project in file("."))
     mainClass in (Compile, packageBin) := Some("net.jtownson.odyssey.VCP"),
     assemblyMergeStrategy in assembly := {
       case PathList("META-INF", "versions", _*) => MergeStrategy.first
-      case PathList("module-info.class", _*) => MergeStrategy.first
-      case PathList("org", "slf4j", _*) => MergeStrategy.first
-      case x => (assemblyMergeStrategy in assembly).value(x)
+      case PathList("module-info.class", _*)    => MergeStrategy.first
+      case PathList("org", "slf4j", _*)         => MergeStrategy.first
+      case x                                    => (assemblyMergeStrategy in assembly).value(x)
     },
     libraryDependencies ++=
       circe ++
