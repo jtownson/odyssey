@@ -50,15 +50,21 @@ object JwsVerifier {
     for {
       jws <- Jws.fromCompactSer(jwsCompactSer)
       payloadJson <- parseBody(jwsCompactSer, jws)
+      claimElement <- parseClaimElement(jwsCompactSer, claimName, payloadJson)
       bodyJsonFixup <- fixupBodyElement(payloadJson)
-      t <- parseT(jwsCompactSer, jsonCodec, claimName, bodyJsonFixup)
+      t <- parseT(jwsCompactSer, jsonCodec, claimElement, bodyJsonFixup)
     } yield (jws, t)
   }
 
-  private def parseT[T](jwsCompactSer: String, jsonCodec: Decoder[T], bodyElement: String, bodyJson: Json) = {
-    jsonCodec(bodyJson.hcursor).left.map(decodingFailure =>
+  private def parseT[T](
+      jwsCompactSer: String,
+      jsonCodec: Decoder[T],
+      claimElement: Json,
+      bodyJson: Json
+  ): Either[ParseError, T] = {
+    jsonCodec(claimElement.hcursor).left.map(decodingFailure =>
       ParseError(
-        s"$bodyElement entry in body cannot be read due to decoding failure '${decodingFailure.message}'. Jws: '$jwsCompactSer'."
+        s"Claim entry in body cannot be read due to decoding failure '${decodingFailure.message}'. Jws: '$jwsCompactSer'."
       )
     )
   }
@@ -67,7 +73,7 @@ object JwsVerifier {
     parse(new String(jws.payload, UTF_8)).left.map(_ => ParseError(s"Unable to parse body to JSON: '$jwsCompactSer'."))
   }
 
-  private def parseBodyElement[T](
+  private def parseClaimElement[T](
       jwsCompactSer: String,
       bodyElement: String,
       payloadJson: Json
