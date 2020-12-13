@@ -122,11 +122,11 @@ object VCDataModel {
     VCJsonCodec.decodeJsonLd(jsonLdSer)
 
   def fromJws(verifier: JwsVerifier, jwsCompactSer: String)(implicit ec: ExecutionContext): Future[VCDataModel] = {
-    JwsVerifier.fromJws[VCDataModel](verifier, jwsCompactSer, vcJsonDecoder, "vc")
+    JwsVerifier.fromJws[VCDataModel](verifier, jwsCompactSer, vcJsonDecoder, json => credentialFixup(json))
   }
 
   def fromJws(jwsCompactSer: String): Either[VerificationError, VCDataModel] = {
-    JwsVerifier.fromJws[VCDataModel](jwsCompactSer, vcJsonDecoder, "vc", json => credentialFixup(json))
+    JwsVerifier.fromJws[VCDataModel](jwsCompactSer, vcJsonDecoder, json => credentialFixup(json))
   }
 
   private def credentialFixup(payloadJson: Json): Either[ParseError, Json] = {
@@ -148,16 +148,58 @@ object VCDataModel {
       fixUnixTimestamp("expirationDate", vc, maybeExp)
     }
 
-    def fixIss(vc: Map[String, Json], maybeIss: Option[URI]): Map[String, Json] = {
-      maybeIss.fold(vc) { iss => vc + ("issuer" -> iss.asJson) }
+    def fixIss(vc: Map[String, Json], maybeIss: Option[Json]): Map[String, Json] = {
+      vc.get("issuer")
+        .fold {
+          maybeIss.fold(vc) { iss =>
+            if (iss.isString) {
+              vc + ("issuer" -> iss)
+            } else if (iss.isObject) {
+              vc + ("issuer" -> iss)
+            } else {
+              vc
+            }
+          }
+        } { issuerJson: Json => // the issuer -- update the id property
+          maybeIss.fold(vc) { jwtIss: Json =>
+            if (jwtIss.isObject && jwtIss.asObject.get.contains("id")) {
+              vc + ("issuer" -> issuerJson.deepMerge(jwtIss))
+            } else if (jwtIss.isString) {
+              vc + ("issuer" -> issuerJson.deepMerge(Json.obj("id" -> jwtIss)))
+            } else {
+              vc
+            }
+          }
+        }
     }
 
     def fixNbf(vc: Map[String, Json], maybeNbf: Option[Long]): Map[String, Json] = {
       fixUnixTimestamp("issuanceDate", vc, maybeNbf)
     }
 
-    def fixSub(vc: Map[String, Json], maybeSub: Option[URI]): Map[String, Json] = {
-      maybeSub.fold(vc) { sub => vc + ("credentialSubject" -> Json.obj("id" -> sub.asJson)) }
+    def fixSub(vc: Map[String, Json], maybeJwtSub: Option[Json]): Map[String, Json] = {
+      vc.get("credentialSubject")
+        .fold { // no existing credentialSubject
+          maybeJwtSub.fold(vc) { jwtSub: Json =>
+            if (jwtSub.isString) {
+              vc + ("credentialSubject" -> jwtSub)
+            } else if (jwtSub.isObject) {
+              vc + ("credentialSubject" -> jwtSub)
+            } else {
+              vc
+            }
+          }
+        } { subjectJson: Json => // the credential subject -- update the id property
+          maybeJwtSub.fold(vc) { jwtSub: Json =>
+            if (jwtSub.isObject && jwtSub.asObject.get.contains("id")) {
+              vc + ("credentialSubject" -> subjectJson.deepMerge(jwtSub))
+            } else if (jwtSub.isString) {
+              vc + ("credentialSubject" -> subjectJson.deepMerge(Json.obj("id" -> jwtSub)))
+            } else {
+              vc
+            }
+          }
+        }
     }
 
     def fixJti(vc: Map[String, Json], maybeJti: Option[URI]): Map[String, Json] = {
@@ -175,9 +217,9 @@ object VCDataModel {
     val f: Either[DecodingFailure, Json] = for {
       vc <- hc.downField("vc").as[Map[String, Json]]
       exp <- hc.downField("exp").as[Option[Long]]
-      iss <- hc.downField("iss").as[Option[URI]]
+      iss <- hc.downField("iss").as[Option[Json]]
       nbf <- hc.downField("nbf").as[Option[Long]]
-      sub <- hc.downField("sub").as[Option[URI]]
+      sub <- hc.downField("sub").as[Option[Json]]
       jti <- hc.downField("jti").as[Option[URI]]
     } yield {
       fixExp(fixIss(fixNbf(fixSub(fixJti(vc, jti), sub), nbf), iss), exp).asJson

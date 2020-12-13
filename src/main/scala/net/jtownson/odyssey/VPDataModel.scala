@@ -3,8 +3,9 @@ package net.jtownson.odyssey
 import java.net.URI
 import java.net.URI.create
 
-import io.circe.{Json, Printer}
 import io.circe.syntax.EncoderOps
+import io.circe.{Json, Printer}
+import net.jtownson.odyssey.VerificationError.ParseError
 import net.jtownson.odyssey.impl.CodecStuff.uriEncoder
 import net.jtownson.odyssey.impl.VPJsonCodec
 import net.jtownson.odyssey.impl.VPJsonCodec.vpJsonEncoder
@@ -43,9 +44,13 @@ object VPDataModel {
   }
 
   def fromJws(verifier: JwsVerifier, jwsCompactSer: String)(implicit ec: ExecutionContext): Future[VPDataModel] = {
-    JwsVerifier.fromJws[VPDataModel](verifier, jwsCompactSer, VPJsonCodec.vpJsonDecoder, "vp")
+    JwsVerifier.fromJws[VPDataModel](verifier, jwsCompactSer, VPJsonCodec.vpJsonDecoder, presentationFixup(_))
   }
 
   def fromJsonLd(jsonLdSer: String): Either[VerificationError, VPDataModel] =
     VPJsonCodec.decodeJsonLd(jsonLdSer)
+
+  private def presentationFixup(payloadJson: Json): Either[ParseError, Json] = {
+    payloadJson.hcursor.downField("vp").as[Json].left.map(decodingFailure => ParseError(decodingFailure.message))
+  }
 }
