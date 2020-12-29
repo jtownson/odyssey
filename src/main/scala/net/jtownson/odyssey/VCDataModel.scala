@@ -4,7 +4,6 @@ import java.net.URI
 import java.net.URI.create
 import java.time.{LocalDateTime, ZoneOffset}
 
-import io.circe.Json.JArray
 import io.circe.syntax.EncoderOps
 import io.circe.{DecodingFailure, Json, JsonObject, Printer}
 import net.jtownson.odyssey.VerificationError.ParseError

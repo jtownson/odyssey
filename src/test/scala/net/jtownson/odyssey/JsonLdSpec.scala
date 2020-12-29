@@ -74,6 +74,6 @@ class JsonLdSpec extends FlatSpec {
     Security.addProvider(new BouncyCastleProvider)
     val (privateKey, publicKey, keyId, resolver) = KeyFoo.generateEDKeyPair()
 
-    println(s"got them $privateKey, $publicKey")
+    println(s"got them $privateKey, $publicKey, ${privateKey.getAlgorithm}, ${privateKey.getFormat}")
   }
 }
